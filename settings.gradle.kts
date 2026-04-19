@@ -1,13 +1,19 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+        google()
+        mavenCentral()
+        maven("https://us-central1-maven.pkg.dev/varabyte-repos/public")
     }
 }
 
 dependencyResolutionManagement {
     repositories {
         mavenCentral()
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
         google()
+        maven("https://us-central1-maven.pkg.dev/varabyte-repos/public")
     }
 }
 
@@ -27,7 +33,6 @@ gradle.settingsEvaluated {
     dependencyResolutionManagement.repositories { kobwebSnapshots() }
 }
 
-rootProject.name = "web"
+rootProject.name = "photocraft"
 
 include(":site")
-include(":worker")
