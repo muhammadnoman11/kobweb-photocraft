@@ -41,7 +41,6 @@ fun CanvasArea(
 ) {
     var isDragOver by remember { mutableStateOf(false) }
 
-
     fun loadImageFile(file: File) {
         val reader = FileReader()
         reader.onload = { event ->
@@ -49,10 +48,13 @@ fun CanvasArea(
             fun tryLoad(attempt: Int) {
                 val canvas = canvasRef.value
                 if (canvas != null) {
-                    if (dataUrl != null)
+                    if (dataUrl != null) {
                         fabricLoadImageFromDataUrl(canvas, dataUrl) {
-                        onImageLoaded();
-                        onHistoryChanged()
+                            // Save snapshot after image load so undo can return to blank
+                            fabricSaveHistorySnapshot(historyRef)
+                            onImageLoaded()
+                            onHistoryChanged()
+                        }
                     }
                 } else if (attempt < 30) {
                     window.setTimeout({ tryLoad(attempt + 1) }, 200)
@@ -65,24 +67,16 @@ fun CanvasArea(
         reader.readAsDataURL(file)
     }
 
-    // Outer flex container (takes remaining space between sidebars)
     Box(
-        modifier = CanvasAreaStyle.toModifier().then(modifier)
-            .fillMaxSize(),
+        modifier = CanvasAreaStyle.toModifier().then(modifier).fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        // Canvas wrapper
-        // inline-block so it shrinks to exactly the Fabric canvas size.
-        // No overflow:hidden — that would clip the Fabric upper-canvas overlay.
         Div(attrs = {
             id("canvas-wrapper")
             style {
-                property("display", "inline-block")
-                property("position", "relative")
+                property("display", "inline-block"); property("position", "relative")
                 property("box-shadow", "0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)")
-                property("border-radius", "2px")
-                property("line-height", "0")
-                // Checkerboard for transparent background visibility
+                property("border-radius", "2px"); property("line-height", "0")
                 property("background", "repeating-conic-gradient(#222 0% 25%, #1a1a1a 0% 50%) 0 0 / 20px 20px")
             }
             onDragOver { e -> e.preventDefault(); isDragOver = true }
@@ -95,60 +89,37 @@ fun CanvasArea(
         }) {
             Canvas(attrs = {
                 id(FABRIC_CANVAS_ID)
-                style {
-                    display(DisplayStyle.Block)
-                }
-
+                style { display(DisplayStyle.Block) }
             })
         }
 
-        // Drag-over overlay
         if (isDragOver) {
             Box(
-                modifier = Modifier
-                    .position(Position.Fixed)
-                    .top(0.px).left(0.px).right(0.px).bottom(0.px)
+                modifier = Modifier.position(Position.Fixed).top(0.px).left(0.px).right(0.px).bottom(0.px)
                     .backgroundColor(Color.rgba(0xc8, 0x92, 0x3f, 30))
                     .border(3.px, LineStyle.Dashed, Color.rgb(0xc8923f))
-                    .zIndex(300)
-                    .display(DisplayStyle.Flex)
-                    .alignItems(AlignItems.Center)
-                    .justifyContent(JustifyContent.Center)
+                    .zIndex(300).display(DisplayStyle.Flex).alignItems(AlignItems.Center).justifyContent(JustifyContent.Center)
                     .pointerEvents(PointerEvents.None),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.px)
-                ) {
-                    I(attrs = {
-                        classes("fa-solid", "fa-cloud-arrow-up")
-                        style { property("font-size", "48px"); property("color", "#c8923f") }
-                    })
-                    SpanText(
-                        "Drop Image Here",
-                        modifier = Modifier
-                            .fontSize(18.px)
-                            .fontWeight(FontWeight.SemiBold)
-                            .color(Color.rgb(0xc8923f))
-                    )
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.px)) {
+                    I(attrs = { classes("fa-solid", "fa-cloud-arrow-up"); style { property("font-size", "48px"); property("color", "#c8923f") } })
+                    SpanText("Drop Image Here", modifier = Modifier.fontSize(18.px).fontWeight(FontWeight.SemiBold).color(Color.rgb(0xc8923f)))
                 }
             }
         }
 
-        // Hidden file input
         Input(type = InputType.File, attrs = {
             id("photocraft-file-input")
             accept("image/*")
             style { display(DisplayStyle.None) }
             onChange { e ->
                 val target = e.target as? HTMLInputElement
-                val file   = target?.files?.get(0)
+                val file = target?.files?.get(0)
                 if (file != null) { loadImageFile(file); target.value = "" }
             }
         })
 
-        // Init Fabric.js once
         LaunchedEffect(Unit) {
             var attempts = 0
             fun tryInit() {
@@ -169,15 +140,13 @@ fun CanvasArea(
     }
 }
 
-// Canvas Initialization (unchanged logic; now lives alongside CanvasArea)
-
 fun initFabricCanvas(
     canvasRef: MutableState<dynamic>,
     historyRef: MutableState<dynamic>,
     onObjectSelected: () -> Unit,
     onHistoryChanged: () -> Unit
 ) {
-    val fabric  = getFabric()
+    val fabric = getFabric()
     if (fabric == null) { console.error("Fabric not available during init"); return }
 
     val canvasEl = document.getElementById(FABRIC_CANVAS_ID) as? HTMLCanvasElement
@@ -185,10 +154,10 @@ fun initFabricCanvas(
 
     val vw = window.innerWidth; val vh = window.innerHeight
     val sidebarW = if (vw < 640) 56 else 260
-    val propsW   = if (vw < 640) 0  else 280
-    val headerH  = 52; val padding = 48
-    val canvasW  = (vw - sidebarW - propsW - padding * 2).coerceIn(280, 1400)
-    val canvasH  = (vh - headerH - padding * 2).coerceIn(250, 1000)
+    val propsW = if (vw < 640) 0 else 280
+    val headerH = 52; val padding = 48
+    val canvasW = (vw - sidebarW - propsW - padding * 2).coerceIn(280, 1400)
+    val canvasH = (vh - headerH - padding * 2).coerceIn(250, 1000)
 
     if (canvasRef.value != null) {
         try { js("canvasRef.value.dispose()") } catch (e: Exception) { }
@@ -214,20 +183,26 @@ fun initFabricCanvas(
     if (fabricCanvas == null) { console.error("fabric.Canvas() returned null"); return }
 
     js("fabricCanvas.__pcMaxWidth = canvasW; fabricCanvas.__pcMaxHeight = canvasH;")
-    canvasRef.value  = fabricCanvas
+    canvasRef.value = fabricCanvas
+
+    // Setup history BEFORE vignette (history object needed first)
     historyRef.value = setupFabricHistory(fabricCanvas)
+
+    // Setup vignette overlay renderer
+    js("_pcSetupVignette(fabricCanvas)")
+
     setupTouchSupport(fabricCanvas)
     setupBoundaryClamp(fabricCanvas)
 
-    val onSelCb  = { onObjectSelected() }
+    val onSelCb = { onObjectSelected() }
     val onHistCb = { onHistoryChanged() }
     js("""
-        fabricCanvas.on('selection:created',  function(){ onSelCb(); });
-        fabricCanvas.on('selection:updated',  function(){ onSelCb(); });
-        fabricCanvas.on('selection:cleared',  function(){ onSelCb(); });
-        fabricCanvas.on('object:added',       function(){ onHistCb(); });
-        fabricCanvas.on('object:modified',    function(){ onHistCb(); });
-        fabricCanvas.on('object:removed',     function(){ onHistCb(); });
+        fabricCanvas.on('selection:created', function(){ onSelCb(); });
+        fabricCanvas.on('selection:updated', function(){ onSelCb(); });
+        fabricCanvas.on('selection:cleared', function(){ onSelCb(); });
+        fabricCanvas.on('object:added',      function(){ onHistCb(); });
+        fabricCanvas.on('object:modified',   function(){ onHistCb(); });
+        fabricCanvas.on('object:removed',    function(){ onHistCb(); });
     """)
 
     val histRef = historyRef

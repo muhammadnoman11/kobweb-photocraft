@@ -1,6 +1,7 @@
 package com.muhammadnoman.photocraft.components.panels
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,7 +33,7 @@ import org.jetbrains.compose.web.dom.I
 
 
 @Composable
-fun ShapesPanel(canvas: dynamic, onChanged: () -> Unit,) {
+fun ShapesPanel(canvas: dynamic, historyRef: MutableState<dynamic>, onChanged: () -> Unit) {
     var shapeColor by remember { mutableStateOf("#c8923f") }
     var strokeColor by remember { mutableStateOf("#ffffff") }
     var strokeWidth by remember { mutableStateOf(0.0) }
@@ -43,10 +44,10 @@ fun ShapesPanel(canvas: dynamic, onChanged: () -> Unit,) {
         SectionLabel("BASIC SHAPES")
         Div(attrs = {
             style {
-                property("display", "grid")
-                property("grid-template-columns", "repeat(4, 1fr)")
-                property("gap", "8px")
-                property("margin-bottom", "14px")
+                property("display", "grid"); property("grid-template-columns", "repeat(4, 1fr)"); property(
+                "gap",
+                "8px"
+            ); property("margin-bottom", "14px")
             }
         }) {
             listOf(
@@ -81,10 +82,7 @@ private fun ShapeCardBtn(icon: String, label: String, onClick: () -> Unit) {
         modifier = ShapeBtnStyle.toModifier().cursor(Cursor.Pointer).onClick { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        I(attrs = {
-            classes("fa-solid", icon)
-            style { property("font-size", "16px"); property("color", "#888888") }
-        })
+        I(attrs = { classes("fa-solid", icon); style { property("font-size", "16px"); property("color", "#888888") } })
         SpanText(label, modifier = Modifier.fontSize(9.px).color(Color.rgb(0x555555)))
     }
 }

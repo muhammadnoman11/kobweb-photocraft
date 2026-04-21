@@ -1,5 +1,6 @@
 package com.muhammadnoman.photocraft.utils
 
+import androidx.compose.runtime.MutableState
 import com.muhammadnoman.photocraft.models.AdjustmentState
 import com.muhammadnoman.photocraft.models.FilterPreset
 import com.muhammadnoman.photocraft.models.LayerItem
@@ -13,25 +14,18 @@ import com.muhammadnoman.photocraft.models.TextProperties
 fun getFabric(): dynamic = js("typeof fabric !== 'undefined' ? fabric : null")
 fun isFabricLoaded(): Boolean = js("typeof fabric !== 'undefined'") as Boolean
 
-// Image Loading
-
-private var imageLoadCallbackCounter = 0
+// Image Loading — single image at a time, no counter leaking
 
 fun fabricLoadImageFromDataUrl(canvas: dynamic, dataUrl: String, onLoad: (dynamic) -> Unit) {
     val fabric = getFabric() ?: run { console.error("Fabric.js not loaded!"); return }
-    val callbackId = "imgCb_${imageLoadCallbackCounter++}"
-    js("window.__fabricCallbacks = window.__fabricCallbacks || {}")
-    js("window.__fabricCallbacks[callbackId] = function(img) { onLoad(img); }")
     js(
         """
-        var cb = window.__fabricCallbacks[callbackId];
         fabric.Image.fromURL(dataUrl, function(img) {
             if (!img || !img.width || !img.height) {
                 console.error('Image failed to load or has zero dimensions');
-                delete window.__fabricCallbacks[callbackId];
                 return;
             }
-
+ 
             img.set({
                 selectable: false,
                 evented: false,
@@ -44,19 +38,19 @@ fun fabricLoadImageFromDataUrl(canvas: dynamic, dataUrl: String, onLoad: (dynami
                 lockRotation: true,
                 hoverCursor: 'default'
             });
-
+ 
             var maxW = canvas.__pcMaxWidth  || window.innerWidth  - 320;
             var maxH = canvas.__pcMaxHeight || window.innerHeight - 100;
             maxW = Math.max(300, maxW);
             maxH = Math.max(250, maxH);
-
+ 
             var iw = img.width, ih = img.height;
             var scale = Math.min(maxW / iw, maxH / ih, 1);
             var newW = Math.round(iw * scale);
             var newH = Math.round(ih * scale);
-
+ 
             canvas.setDimensions({ width: newW, height: newH });
-
+ 
             img.set({
                 left: 0,
                 top: 0,
@@ -65,27 +59,28 @@ fun fabricLoadImageFromDataUrl(canvas: dynamic, dataUrl: String, onLoad: (dynami
                 scaleX: scale,
                 scaleY: scale
             });
-
+ 
             canvas.__pcBaseImage = img;
             img._pcFilterState = {
                 brightness:0, contrast:0, saturation:0, hue:0,
                 blur:0, noise:0, opacity:100, grayscale:0, sepia:0,
+                highlights:0, shadows:0, temperature:0, tint:0, vignette:0,
                 presetBrightness:0, presetContrast:0, presetSaturation:0, presetBlur:0
             };
-
+ 
+            // Clear everything before adding new image
             canvas.clear();
             canvas.add(img);
             canvas.discardActiveObject();
             canvas.requestRenderAll();
-
-            delete window.__fabricCallbacks[callbackId];
-            if (cb) cb(img);
+ 
+            if (onLoad) onLoad(img);
         }, { crossOrigin: 'anonymous' });
     """
     )
 }
 
-// Filter helper injection
+// Filter helper injection — now includes highlights, shadows, temperature, tint, vignette
 
 fun injectFilterHelper() {
     js(
@@ -94,27 +89,141 @@ fun injectFilterHelper() {
             window._pcRebuildFilters = function(img, fabric) {
                 var s = img._pcFilterState;
                 img.filters = [];
+ 
+                // --- Brightness (preset + manual) ---
                 var totalBrightness = ((s.presetBrightness||0) + (s.brightness||0));
                 if (totalBrightness !== 0)
                     img.filters.push(new fabric.Image.filters.Brightness({ brightness: totalBrightness/100 }));
+ 
+                // --- Contrast (preset + manual) ---
                 var totalContrast = ((s.presetContrast||0) + (s.contrast||0));
                 if (totalContrast !== 0)
                     img.filters.push(new fabric.Image.filters.Contrast({ contrast: totalContrast/100 }));
+ 
+                // --- Saturation (preset + manual) ---
                 var totalSaturation = ((s.presetSaturation||0) + (s.saturation||0));
                 if (totalSaturation !== 0)
                     img.filters.push(new fabric.Image.filters.Saturation({ saturation: totalSaturation/100 }));
+ 
+                // --- Hue ---
                 if ((s.hue||0) !== 0)
-                    img.filters.push(new fabric.Image.filters.HueRotation({ rotation: s.hue/360 }));
+                    img.filters.push(new fabric.Image.filters.HueRotation({ rotation: (s.hue||0)/360 }));
+ 
+                // --- Grayscale ---
                 if ((s.grayscale||0) > 0) img.filters.push(new fabric.Image.filters.Grayscale());
-                if ((s.sepia||0) > 0)     img.filters.push(new fabric.Image.filters.Sepia());
+ 
+                // --- Sepia ---
+                if ((s.sepia||0) > 0) img.filters.push(new fabric.Image.filters.Sepia());
+ 
+                // --- Blur (preset + manual) ---
                 var totalBlur = ((s.presetBlur||0) + (s.blur||0));
                 if (totalBlur > 0)
                     img.filters.push(new fabric.Image.filters.Blur({ blur: totalBlur/100 }));
+ 
+                // --- Noise ---
                 if ((s.noise||0) > 0)
-                    img.filters.push(new fabric.Image.filters.Noise({ noise: s.noise*1.5 }));
-                img.set('opacity', (s.opacity !== undefined ? s.opacity : 100) / 100);
+                    img.filters.push(new fabric.Image.filters.Noise({ noise: (s.noise||0)*1.5 }));
+ 
+                // --- Highlights: brighten only light tones using Gamma ---
+//                var hl = (s.highlights||0);
+//                if (hl !== 0) {
+//                    // positive highlights → lift whites; negative → pull highlights down
+////                    var hlGamma = hl > 0
+////                        ? [1, 1, 1 + hl/200]   // lift bright channel
+////                        : [1, 1, 1 + hl/100];   // darken highlights
+//                       var hlGamma;
+//                       if (hl > 0) {
+//                           hlGamma = [1, 1, 1 + hl/200];
+//                       } else {
+//                           hlGamma = [1, 1, 1 + hl/100];
+//                       }
+//                    // Use a ColorMatrix that simulates highlight control:
+//                    // We boost/reduce the upper tonal range via a custom gamma on a composite channel
+//                    var hlFactor = 1 + (hl / 150);
+//                    img.filters.push(new fabric.Image.filters.Gamma({ gamma: [
+//                        Math.max(0.1, hlFactor > 1 ? 1 + (hlFactor-1)*0.5 : hlFactor),
+//                        Math.max(0.1, hlFactor > 1 ? 1 + (hlFactor-1)*0.5 : hlFactor),
+//                        Math.max(0.1, hlFactor > 1 ? 1 + (hlFactor-1)*0.5 : hlFactor)
+//                    ]}));
+//                }
+ 
+                // --- Shadows: brighten/darken only dark tones using Brightness + blend ---
+//                var sh = (s.shadows||0);
+//                if (sh !== 0) {
+//                    // Shadows: use a small brightness offset combined with a gamma curve
+//                    // to primarily affect dark areas. We approximate with Brightness + Gamma inverse.
+//                    var shBrightness = sh / 400; // small offset
+//                    var shGamma = sh > 0
+//                        ? Math.max(0.3, 1 - sh/200)   // gamma < 1 lifts shadows
+//                        : Math.min(3.0, 1 - sh/200);  // gamma > 1 crushes shadows
+//                    img.filters.push(new fabric.Image.filters.Gamma({ gamma: [shGamma, shGamma, shGamma] }));
+//                    if (Math.abs(shBrightness) > 0.01)
+//                        img.filters.push(new fabric.Image.filters.Brightness({ brightness: shBrightness }));
+//                }
+ 
+                // --- Temperature: warm (positive) = more red/yellow, cool (negative) = more blue ---
+                var temp = (s.temperature||0);
+                if (temp !== 0) {
+                    var t = temp / 100;
+                    // ColorMatrix: shift R and B channels in opposite directions
+                    img.filters.push(new fabric.Image.filters.ColorMatrix({
+                        matrix: [
+                            1 + t*0.3, 0,         0,         0, 0,
+                            0,         1 + t*0.05, 0,         0, 0,
+                            0,         0,         1 - t*0.3, 0, 0,
+                            0,         0,         0,         1, 0
+                        ]
+                    }));
+                }
+ 
+                // --- Tint: positive = green tint, negative = magenta tint ---
+                var tint = (s.tint||0);
+                if (tint !== 0) {
+                    var ti = tint / 100;
+                    img.filters.push(new fabric.Image.filters.ColorMatrix({
+                        matrix: [
+                            1 - ti*0.1, 0,          0,          0, 0,
+                            0,          1 + ti*0.2, 0,          0, 0,
+                            0,          0,          1 - ti*0.1, 0, 0,
+                            0,          0,          0,          1, 0
+                        ]
+                    }));
+                }
+ 
+                // --- Opacity ---
+                img.set('opacity', ((s.opacity !== undefined ? s.opacity : 100)) / 100);
+ 
                 img.applyFilters();
-                img.canvas && img.canvas.requestRenderAll();
+ 
+                // --- Vignette: drawn as overlay on canvas after render ---
+                // We store it and re-draw after applyFilters triggers render
+                if (img.canvas) {
+                    img.canvas._pcVignetteStrength = (s.vignette||0) / 100;
+                    img.canvas.requestRenderAll();
+                }
+            };
+        }
+ 
+        // Vignette overlay — drawn via canvas 'after:render' event
+        if (!window._pcSetupVignette) {
+            window._pcSetupVignette = function(fabricCanvas) {
+                fabricCanvas.on('after:render', function() {
+                    var strength = fabricCanvas._pcVignetteStrength || 0;
+                    if (strength <= 0) return;
+                    var ctx = fabricCanvas.getContext();
+                    var w = fabricCanvas.getWidth();
+                    var h = fabricCanvas.getHeight();
+                    var gradient = ctx.createRadialGradient(
+                        w/2, h/2, Math.min(w,h) * 0.3,
+                        w/2, h/2, Math.max(w,h) * 0.75
+                    );
+                    gradient.addColorStop(0, 'rgba(0,0,0,0)');
+                    gradient.addColorStop(1, 'rgba(0,0,0,' + Math.min(0.85, strength) + ')');
+                    ctx.save();
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.restore();
+                });
             };
         }
     """
@@ -134,6 +243,7 @@ fun fabricApplyPresetFilter(img: dynamic, preset: FilterPreset) {
         if (!img._pcFilterState) {
             img._pcFilterState = { brightness:0,contrast:0,saturation:0,hue:0,
                 blur:0,noise:0,opacity:100,grayscale:0,sepia:0,
+                highlights:0,shadows:0,temperature:0,tint:0,vignette:0,
                 presetBrightness:0,presetContrast:0,presetSaturation:0,presetBlur:0 };
         }
         img._pcFilterState.presetBrightness = brightness;
@@ -156,20 +266,31 @@ fun fabricApplyAdjustments(img: dynamic, adj: AdjustmentState) {
     val blur = adj.blur
     val noise = adj.noise
     val opacity = adj.opacity
+    val highlights = adj.highlights
+    val shadows = adj.shadows
+    val temperature = adj.temperature
+    val tint = adj.tint
+    val vignette = adj.vignette
     js(
         """
         if (!img._pcFilterState) {
             img._pcFilterState = { brightness:0,contrast:0,saturation:0,hue:0,
                 blur:0,noise:0,opacity:100,grayscale:0,sepia:0,
+                highlights:0,shadows:0,temperature:0,tint:0,vignette:0,
                 presetBrightness:0,presetContrast:0,presetSaturation:0,presetBlur:0 };
         }
-        img._pcFilterState.brightness = brightness;
-        img._pcFilterState.contrast   = contrast;
-        img._pcFilterState.saturation = saturation;
-        img._pcFilterState.hue        = hue;
-        img._pcFilterState.blur       = blur;
-        img._pcFilterState.noise      = noise;
-        img._pcFilterState.opacity    = opacity;
+        img._pcFilterState.brightness  = brightness;
+        img._pcFilterState.contrast    = contrast;
+        img._pcFilterState.saturation  = saturation;
+        img._pcFilterState.hue         = hue;
+        img._pcFilterState.blur        = blur;
+        img._pcFilterState.noise       = noise;
+        img._pcFilterState.opacity     = opacity;
+        img._pcFilterState.highlights  = highlights;
+        img._pcFilterState.shadows     = shadows;
+        img._pcFilterState.temperature = temperature;
+        img._pcFilterState.tint        = tint;
+        img._pcFilterState.vignette    = vignette;
         _pcRebuildFilters(img, fabric);
     """
     )
@@ -182,18 +303,18 @@ fun fabricGetAdjustmentState(canvas: dynamic): AdjustmentState? {
     val img = getActiveImageObject(canvas) ?: return null
     val state = js("img._pcFilterState") ?: return null
     return AdjustmentState(
-        brightness  = (js("state.brightness")  as? Double) ?: 0.0,
-        contrast    = (js("state.contrast")    as? Double) ?: 0.0,
-        saturation  = (js("state.saturation")  as? Double) ?: 0.0,
-        hue         = (js("state.hue")         as? Double) ?: 0.0,
-        blur        = (js("state.blur")        as? Double) ?: 0.0,
-        noise       = (js("state.noise")       as? Double) ?: 0.0,
-        opacity     = (js("state.opacity")     as? Double) ?: 100.0,
-        highlights  = 0.0,
-        shadows     = 0.0,
-        temperature = 0.0,
-        tint        = 0.0,
-        vignette    = 0.0
+        brightness = (js("state.brightness") as? Double) ?: 0.0,
+        contrast = (js("state.contrast") as? Double) ?: 0.0,
+        saturation = (js("state.saturation") as? Double) ?: 0.0,
+        hue = (js("state.hue") as? Double) ?: 0.0,
+        blur = (js("state.blur") as? Double) ?: 0.0,
+        noise = (js("state.noise") as? Double) ?: 0.0,
+        opacity = (js("state.opacity") as? Double) ?: 100.0,
+        highlights = (js("state.highlights") as? Double) ?: 0.0,
+        shadows = (js("state.shadows") as? Double) ?: 0.0,
+        temperature = (js("state.temperature") as? Double) ?: 0.0,
+        tint = (js("state.tint") as? Double) ?: 0.0,
+        vignette = (js("state.vignette") as? Double) ?: 0.0
     )
 }
 
@@ -314,21 +435,25 @@ fun fabricAddShape(canvas: dynamic, shapeType: ShapeType, color: String = "#c892
             var r=new fabric.Rect({left:cx-75,top:cy-50,width:150,height:100,fill:color,rx:6,ry:6});
             canvas.add(r);canvas.setActiveObject(r);canvas.requestRenderAll();"""
         )
+
         ShapeType.CIRCLE -> js(
             """
             var c=new fabric.Circle({left:cx-60,top:cy-60,radius:60,fill:color});
             canvas.add(c);canvas.setActiveObject(c);canvas.requestRenderAll();"""
         )
+
         ShapeType.TRIANGLE -> js(
             """
             var t=new fabric.Triangle({left:cx-60,top:cy-60,width:120,height:100,fill:color});
             canvas.add(t);canvas.setActiveObject(t);canvas.requestRenderAll();"""
         )
+
         ShapeType.LINE -> js(
             """
             var l=new fabric.Line([cx-80,cy,cx+80,cy],{stroke:color,strokeWidth:4});
             canvas.add(l);canvas.setActiveObject(l);canvas.requestRenderAll();"""
         )
+
         else -> js(
             """
             var s=new fabric.Polygon([
@@ -365,17 +490,15 @@ fun fabricStartCrop(canvas: dynamic, aspectRatio: String = "free"): dynamic {
     return js(
         """
         (function() {
-            // Calculate initial crop rect dimensions respecting aspect ratio
             var cropW = w * 0.8;
             var cropH = h * 0.8;
             var cropX = w * 0.1;
             var cropY = h * 0.1;
-
+ 
             if (aspectRatio !== 'free') {
                 var parts = aspectRatio.split(':');
                 if (parts.length === 2) {
                     var ar = parseFloat(parts[0]) / parseFloat(parts[1]);
-                    // Fit within the 80% area maintaining aspect ratio
                     var maxW = w * 0.8;
                     var maxH = h * 0.8;
                     if (maxW / ar <= maxH) {
@@ -389,7 +512,7 @@ fun fabricStartCrop(canvas: dynamic, aspectRatio: String = "free"): dynamic {
                     cropY = (h - cropH) / 2;
                 }
             }
-
+ 
             var cropRect = new fabric.Rect({
                 left: cropX,
                 top: cropY,
@@ -409,8 +532,7 @@ fun fabricStartCrop(canvas: dynamic, aspectRatio: String = "free"): dynamic {
                 hasRotatingPoint: false,
                 _pcAspectRatio: aspectRatio
             });
-
-            // Lock aspect ratio if not free
+ 
             if (aspectRatio !== 'free') {
                 var parts2 = aspectRatio.split(':');
                 if (parts2.length === 2) {
@@ -418,13 +540,11 @@ fun fabricStartCrop(canvas: dynamic, aspectRatio: String = "free"): dynamic {
                     cropRect.on('scaling', function() {
                         var newW = cropRect.width * cropRect.scaleX;
                         var newH = newW / targetAR;
-                        cropRect.set({
-                            scaleY: newH / cropRect.height
-                        });
+                        cropRect.set({ scaleY: newH / cropRect.height });
                     });
                 }
             }
-
+ 
             canvas.add(cropRect);
             canvas.setActiveObject(cropRect);
             canvas.requestRenderAll();
@@ -447,34 +567,29 @@ fun fabricApplyCrop(canvas: dynamic, cropRect: dynamic) {
                 canvas.requestRenderAll();
                 return;
             }
-
-            // Get the crop rect's actual screen coordinates
+ 
             var cropLeft   = cropRect.left;
             var cropTop    = cropRect.top;
             var cropWidth  = cropRect.getScaledWidth();
             var cropHeight = cropRect.getScaledHeight();
-
-            // Get image's actual screen coordinates
+ 
             var imgLeft = activeImg.left;
             var imgTop  = activeImg.top;
             var imgScaleX = activeImg.scaleX || 1;
             var imgScaleY = activeImg.scaleY || 1;
-
-            // Convert screen crop coordinates to image-local pixel coordinates
+ 
             var localX = (cropLeft - imgLeft) / imgScaleX;
             var localY = (cropTop  - imgTop)  / imgScaleY;
             var localW = cropWidth  / imgScaleX;
             var localH = cropHeight / imgScaleY;
-
-            // Clamp to image bounds
+ 
             var imgNatW = activeImg.width;
             var imgNatH = activeImg.height;
             localX = Math.max(0, Math.min(localX, imgNatW));
             localY = Math.max(0, Math.min(localY, imgNatH));
             localW = Math.max(1, Math.min(localW, imgNatW - localX));
             localH = Math.max(1, Math.min(localH, imgNatH - localY));
-
-            // Apply crop to the image object
+ 
             activeImg.set({
                 cropX: localX,
                 cropY: localY,
@@ -487,15 +602,14 @@ fun fabricApplyCrop(canvas: dynamic, cropRect: dynamic) {
                 originX: 'left',
                 originY: 'top'
             });
-
+ 
             activeImg.setCoords();
             canvas.remove(cropRect);
-
-            // Resize canvas to fit the cropped image
+ 
             canvas.setDimensions({ width: Math.round(cropWidth), height: Math.round(cropHeight) });
             activeImg.set({ left: 0, top: 0 });
             activeImg.setCoords();
-
+ 
             canvas.requestRenderAll();
         })()
     """
@@ -655,60 +769,106 @@ fun fabricSetTransparentBackground(canvas: dynamic) {
     js("canvas.setBackgroundImage(null, canvas.requestRenderAll.bind(canvas))")
 }
 
-// History
+// ============================================================
+// HISTORY — Proper granular undo/redo
+// Key design:
+//  1. history.saveSnapshot() is called EXPLICITLY after every
+//     discrete user action (filter apply, adjustment change, add
+//     shape, add text, crop, etc.) — NOT on every canvas event.
+//  2. Canvas object:added/modified/removed still save, but we
+//     debounce them so rapid slider drags coalesce into ONE entry.
+//  3. Filter/adjustment changes call saveSnapshot() manually via
+//     Kotlin after the JS filter rebuild completes.
+// ============================================================
 
 fun setupFabricHistory(canvas: dynamic): dynamic {
     return js(
         """
-        var history = { states:[], current:-1, maxStates:50 };
-        var saving = false;
-        function saveState() {
-            if (saving) return;
-            saving = true;
+        var history = { states:[], current:-1, maxStates:100 };
+        history._saving = false;
+        history._debounceTimer = null;
+ 
+        // Save a snapshot immediately (used for explicit actions)
+        history.saveSnapshot = function() {
+            if (history._saving) return;
+            history._saving = true;
+            // Trim redo branch
             if (history.current < history.states.length - 1)
                 history.states.splice(history.current + 1);
-            history.states.push(canvas.toJSON([
+            var json = canvas.toJSON([
                 '_pcFilterState','_pcActivePresetId','selectable','evented',
                 'hasControls','hasBorders','lockMovementX','lockMovementY',
-                'lockScalingX','lockScalingY','lockRotation','hoverCursor'
-            ]));
+                'lockScalingX','lockScalingY','lockRotation','hoverCursor',
+                'flipX','flipY','angle'
+            ]);
+            // Deep-clone so mutations to live objects don't corrupt history
+            history.states.push(JSON.parse(JSON.stringify(json)));
             if (history.states.length > history.maxStates) history.states.shift();
             else history.current++;
-            saving = false;
-        }
+            history._saving = false;
+        };
+ 
+        // Debounced save — coalesces rapid events (e.g. object:modified during drag)
+        history._debouncedSave = function() {
+            clearTimeout(history._debounceTimer);
+            history._debounceTimer = setTimeout(function() {
+                history.saveSnapshot();
+            }, 300);
+        };
+ 
         history.undo = function() {
-            if (history.current > 0) {
-                history.current--;
-                saving = true;
-                canvas.loadFromJSON(history.states[history.current], function() {
-                    canvas.requestRenderAll();
-                    saving = false;
-                });
-                return true;
-            }
-            return false;
+            if (history.current <= 0) return false;
+            history.current--;
+            history._saving = true;
+            canvas.loadFromJSON(history.states[history.current], function() {
+                canvas.requestRenderAll();
+                history._saving = false;
+            });
+            return true;
         };
+ 
         history.redo = function() {
-            if (history.current < history.states.length - 1) {
-                history.current++;
-                saving = true;
-                canvas.loadFromJSON(history.states[history.current], function() {
-                    canvas.requestRenderAll();
-                    saving = false;
-                });
-                return true;
-            }
-            return false;
+            if (history.current >= history.states.length - 1) return false;
+            history.current++;
+            history._saving = true;
+            canvas.loadFromJSON(history.states[history.current], function() {
+                canvas.requestRenderAll();
+                history._saving = false;
+            });
+            return true;
         };
+ 
         history.canUndo = function() { return history.current > 0; };
         history.canRedo = function() { return history.current < history.states.length - 1; };
-        canvas.on('object:added',    saveState);
-        canvas.on('object:modified', saveState);
-        canvas.on('object:removed',  saveState);
-        saveState();
+ 
+        // Only structural changes (add/remove/move/resize/rotate) auto-save via debounce.
+        // Filter and adjustment changes are saved explicitly by Kotlin callers.
+        canvas.on('object:added',    function(e) {
+            // Don't save when the crop rect is added
+            if (e.target && e.target.id === '_pcCropRect') return;
+            if (!history._saving) history._debouncedSave();
+        });
+        canvas.on('object:modified', function(e) {
+            if (e.target && e.target.id === '_pcCropRect') return;
+            if (!history._saving) history._debouncedSave();
+        });
+        canvas.on('object:removed',  function(e) {
+            if (e.target && e.target.id === '_pcCropRect') return;
+            if (!history._saving) history._debouncedSave();
+        });
+ 
+        // Save initial blank state
+        history.saveSnapshot();
         history;
     """
     )
+}
+
+// Expose a Kotlin-callable helper to explicitly save a history snapshot
+// (called after every filter/adjustment/preset change)
+fun fabricSaveHistorySnapshot(historyRef: MutableState<dynamic>) {
+    val hist = historyRef.value ?: return
+    js("hist.saveSnapshot()")
 }
 
 // Touch support

@@ -1,6 +1,7 @@
 package com.muhammadnoman.photocraft.components.panels
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -14,6 +15,7 @@ import com.muhammadnoman.photocraft.styles.FilterCardStyle
 import com.muhammadnoman.photocraft.utils.fabricApplyPresetFilter
 import com.muhammadnoman.photocraft.utils.fabricGetActivePresetId
 import com.muhammadnoman.photocraft.utils.fabricGetFilterThumbnail
+import com.muhammadnoman.photocraft.utils.fabricSaveHistorySnapshot
 import com.muhammadnoman.photocraft.utils.fabricSetActivePresetId
 import com.muhammadnoman.photocraft.utils.getActiveImageObject
 import com.varabyte.kobweb.compose.css.Cursor
@@ -64,12 +66,9 @@ import org.jetbrains.compose.web.dom.Img
 
 
 @Composable
-fun FiltersPanel(canvas: dynamic, hasImage: Boolean, onFilterApplied: () -> Unit) {
-    // Initialise active preset from the image's stored state (survives tool switches)
+fun FiltersPanel(canvas: dynamic, hasImage: Boolean, historyRef: MutableState<dynamic>, onFilterApplied: () -> Unit) {
     var activePresetId by remember(canvas, hasImage) {
-        mutableStateOf(
-            if (hasImage && canvas != null) fabricGetActivePresetId(canvas) else "none"
-        )
+        mutableStateOf(if (hasImage && canvas != null) fabricGetActivePresetId(canvas) else "none")
     }
 
     val thumbnails = remember(hasImage, canvas) {
@@ -83,9 +82,7 @@ fun FiltersPanel(canvas: dynamic, hasImage: Boolean, onFilterApplied: () -> Unit
 
         Div(attrs = {
             style {
-                property("display", "grid")
-                property("grid-template-columns", "repeat(3, 1fr)")
-                property("gap", "8px")
+                property("display", "grid"); property("grid-template-columns", "repeat(3, 1fr)"); property("gap", "8px")
             }
         }) {
             FILTER_PRESETS.forEach { preset ->
@@ -96,8 +93,9 @@ fun FiltersPanel(canvas: dynamic, hasImage: Boolean, onFilterApplied: () -> Unit
                     onClick = {
                         activePresetId = preset.id
                         applyPreset(canvas, preset)
-                        // Persist the selection on the image object
                         fabricSetActivePresetId(canvas, preset.id)
+                        // Save snapshot explicitly after filter change
+                        fabricSaveHistorySnapshot(historyRef)
                         onFilterApplied()
                     }
                 )
@@ -110,35 +108,24 @@ fun FiltersPanel(canvas: dynamic, hasImage: Boolean, onFilterApplied: () -> Unit
             val nonePreset = FILTER_PRESETS.first { it.id == "none" }
             applyPreset(canvas, nonePreset)
             fabricSetActivePresetId(canvas, "none")
+            fabricSaveHistorySnapshot(historyRef)
             onFilterApplied()
         })
     }
 }
 
 @Composable
-private fun FilterCard(
-    preset: FilterPreset,
-    isActive: Boolean,
-    thumbnail: String,
-    onClick: () -> Unit
-) {
+private fun FilterCard(preset: FilterPreset, isActive: Boolean, thumbnail: String, onClick: () -> Unit) {
     Column(
         modifier = FilterCardStyle.toModifier()
             .then(
-                if (isActive)
-                    Modifier.border(2.px, LineStyle.Solid, Color.rgb(0xc8923f))
-                        .backgroundColor(Color.rgba(0xc8, 0x92, 0x3f, 38))
-                else Modifier
+                if (isActive) Modifier.border(2.px, LineStyle.Solid, Color.rgb(0xc8923f))
+                    .backgroundColor(Color.rgba(0xc8, 0x92, 0x3f, 38)) else Modifier
             )
-            .cursor(Cursor.Pointer)
-            .onClick { onClick() }
+            .cursor(Cursor.Pointer).onClick { onClick() }
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.px)
-                .overflow(Overflow.Hidden)
-                .position(Position.Relative),
+            modifier = Modifier.fillMaxWidth().height(60.px).overflow(Overflow.Hidden).position(Position.Relative),
             contentAlignment = Alignment.Center
         ) {
             if (thumbnail.isNotEmpty()) {
@@ -152,30 +139,29 @@ private fun FilterCard(
                 })
             } else {
                 I(attrs = {
-                    classes("fa-solid", "fa-image")
-                    style {
-                        property("color", if (isActive) "#c8923f" else "#555555")
-                        property("font-size", "20px")
-                    }
+                    classes("fa-solid", "fa-image"); style {
+                    property(
+                        "color",
+                        if (isActive) "#c8923f" else "#555555"
+                    ); property("font-size", "20px")
+                }
                 })
             }
 
             if (isActive) {
                 Box(
-                    modifier = Modifier
-                        .position(Position.Absolute)
-                        .top(4.px).right(4.px)
-                        .size(16.px)
-                        .borderRadius(50.percent)
-                        .backgroundColor(Color.rgb(0xc8923f))
-                        .display(DisplayStyle.Flex)
-                        .alignItems(AlignItems.Center)
-                        .justifyContent(JustifyContent.Center),
+                    modifier = Modifier.position(Position.Absolute).top(4.px).right(4.px)
+                        .size(16.px).borderRadius(50.percent).backgroundColor(Color.rgb(0xc8923f))
+                        .display(DisplayStyle.Flex).alignItems(AlignItems.Center).justifyContent(JustifyContent.Center),
                     contentAlignment = Alignment.Center
                 ) {
                     I(attrs = {
-                        classes("fa-solid", "fa-check")
-                        style { property("font-size", "8px"); property("color", "#fff") }
+                        classes("fa-solid", "fa-check"); style {
+                        property("font-size", "8px"); property(
+                        "color",
+                        "#fff"
+                    )
+                    }
                     })
                 }
             }
@@ -183,16 +169,10 @@ private fun FilterCard(
 
         SpanText(
             preset.name,
-            modifier = Modifier
-                .fontSize(10.px)
-                .padding(4.px)
-                .fillMaxWidth()
-                .textAlign(TextAlign.Center)
+            modifier = Modifier.fontSize(10.px).padding(4.px).fillMaxWidth().textAlign(TextAlign.Center)
                 .color(if (isActive) Color.rgb(0xc8923f) else Color.rgb(0x888888))
                 .fontWeight(if (isActive) FontWeight.SemiBold else FontWeight.Normal)
-                .overflow(Overflow.Hidden)
-                .textOverflow(TextOverflow.Ellipsis)
-                .whiteSpace(WhiteSpace.NoWrap)
+                .overflow(Overflow.Hidden).textOverflow(TextOverflow.Ellipsis).whiteSpace(WhiteSpace.NoWrap)
         )
     }
 }

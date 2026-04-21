@@ -28,12 +28,10 @@ import com.varabyte.kobweb.silk.style.toModifier
 import org.jetbrains.compose.web.css.px
 import org.jetbrains.compose.web.dom.I
 
+
 @Composable
 fun UploadPanel(onUploadClick: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(16.px),
-        horizontalAlignment = Alignment.Start
-    ) {
+    Column(modifier = Modifier.fillMaxWidth().padding(16.px), horizontalAlignment = Alignment.Start) {
         PanelTitle("Upload Image")
 
         // Drop zone
@@ -46,35 +44,28 @@ fun UploadPanel(onUploadClick: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(8.px)
             ) {
                 I(attrs = {
-                    classes("fa-solid", "fa-cloud-arrow-up")
-                    style { property("font-size", "28px"); property("color", "#c8923f") }
+                    classes("fa-solid", "fa-cloud-arrow-up"); style {
+                    property(
+                        "font-size",
+                        "28px"
+                    ); property("color", "#c8923f")
+                }
                 })
                 SpanText(
                     "Click to Browse",
-                    modifier = Modifier
-                        .fontSize(13.px)
-                        .fontWeight(FontWeight.Medium)
-                        .color(Color.rgb(0xf0f0f0))
+                    modifier = Modifier.fontSize(13.px).fontWeight(FontWeight.Medium).color(Color.rgb(0xf0f0f0))
                 )
-                SpanText(
-                    "PNG, JPG, GIF, WebP, SVG",
-                    modifier = Modifier.fontSize(11.px).color(Color.rgb(0x555555))
-                )
+                SpanText("PNG, JPG, GIF, WebP, SVG", modifier = Modifier.fontSize(11.px).color(Color.rgb(0x555555)))
             }
         }
 
         SpanText(
             "or drag & drop an image on the canvas",
-            modifier = Modifier
-                .fontSize(11.px)
-                .color(Color.rgb(0x555555))
-                .fillMaxWidth()
-                .textAlign(TextAlign.Center)
+            modifier = Modifier.fontSize(11.px).color(Color.rgb(0x555555)).fillMaxWidth().textAlign(TextAlign.Center)
                 .margin(bottom = 16.px)
         )
 
         PanelDivider()
-
         SectionLabel("SUPPORTED FORMATS")
         listOf(
             "fa-image" to "PNG / JPG / WebP",
@@ -86,13 +77,14 @@ fun UploadPanel(onUploadClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 I(attrs = {
-                    classes("fa-solid", icon)
-                    style { property("color", "#c8923f"); property("font-size", "11px"); property("width", "14px") }
+                    classes("fa-solid", icon); style {
+                    property("color", "#c8923f"); property(
+                    "font-size",
+                    "11px"
+                ); property("width", "14px")
+                }
                 })
-                SpanText(
-                    label,
-                    modifier = Modifier.fontSize(12.px).color(Color.rgb(0x888888))
-                )
+                SpanText(label, modifier = Modifier.fontSize(12.px).color(Color.rgb(0x888888)))
             }
         }
     }

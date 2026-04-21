@@ -1,6 +1,7 @@
 package com.muhammadnoman.photocraft.components.panels
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,7 +40,7 @@ import org.jetbrains.compose.web.dom.TextArea
 
 
 @Composable
-fun TextPanel(canvas: dynamic, onChanged: () -> Unit) {
+fun TextPanel(canvas: dynamic, historyRef: MutableState<dynamic>, onChanged: () -> Unit) {
     var props by remember { mutableStateOf(TextProperties()) }
 
     fun updateActive() {
@@ -92,8 +93,7 @@ fun TextPanel(canvas: dynamic, onChanged: () -> Unit) {
                 property("border", "1px solid #2a2a2a"); property("border-radius", "8px")
                 property("color", "#f0f0f0"); property("font-family", "'Space Grotesk', sans-serif")
                 property("font-size", "12px"); property("padding", "6px 8px")
-                property("outline", "none"); property("cursor", "pointer")
-                property("margin-bottom", "10px")
+                property("outline", "none"); property("cursor", "pointer"); property("margin-bottom", "10px")
             }
         }) {
             FONT_FAMILIES.forEach { font ->

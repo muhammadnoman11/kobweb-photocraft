@@ -1,6 +1,7 @@
 package com.muhammadnoman.photocraft.components.panels
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,7 +31,7 @@ import org.jetbrains.compose.web.dom.Text
 
 
 @Composable
-fun StickersPanel(canvas: dynamic, onChanged: () -> Unit) {
+fun StickersPanel(canvas: dynamic, historyRef: MutableState<dynamic>, onChanged: () -> Unit) {
     var activeCategory by remember { mutableStateOf("emoji") }
 
     Column(modifier = Modifier.fillMaxWidth().padding(16.px)) {
@@ -46,13 +47,10 @@ fun StickersPanel(canvas: dynamic, onChanged: () -> Unit) {
                         property("border-radius", "4px")
                         property("background", if (isActive) "rgba(200,146,63,0.15)" else "transparent")
                         property("color", if (isActive) "#c8923f" else "#888888")
-                        property("font-family", "'Space Grotesk', sans-serif")
-                        property("font-size", "11px")
+                        property("font-family", "'Space Grotesk', sans-serif"); property("font-size", "11px")
                         property("font-weight", if (isActive) "600" else "400")
-                        property("padding", "5px 10px")
-                        property("cursor", "pointer")
-                        property("transition", "all 0.2s ease")
-                        property("outline", "none")
+                        property("padding", "5px 10px"); property("cursor", "pointer")
+                        property("transition", "all 0.2s ease"); property("outline", "none")
                     }
                 }) { Text(cat.name) }
             }
@@ -62,24 +60,21 @@ fun StickersPanel(canvas: dynamic, onChanged: () -> Unit) {
         currentCat?.let { cat ->
             Div(attrs = {
                 style {
-                    property("display", "grid")
-                    property("grid-template-columns", "repeat(4, 1fr)")
-                    property("gap", "8px")
+                    property("display", "grid"); property(
+                    "grid-template-columns",
+                    "repeat(4, 1fr)"
+                ); property("gap", "8px")
                 }
             }) {
                 cat.stickers.forEach { sticker ->
                     Box(
-                        modifier = StickerCardStyle.toModifier()
-                            .cursor(Cursor.Pointer)
-                            .onClick {
-                                if (canvas != null) {
-                                    fabricAddSticker(canvas, sticker); onChanged()
-                                }
-                            },
+                        modifier = StickerCardStyle.toModifier().cursor(Cursor.Pointer).onClick {
+                            if (canvas != null) {
+                                fabricAddSticker(canvas, sticker); onChanged()
+                            }
+                        },
                         contentAlignment = Alignment.Center
-                    ) {
-                        Text(sticker)
-                    }
+                    ) { Text(sticker) }
                 }
             }
         }

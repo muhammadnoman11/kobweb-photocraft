@@ -16,6 +16,7 @@ import com.muhammadnoman.photocraft.utils.*
 import kotlinx.browser.document
 import org.w3c.dom.HTMLInputElement
 
+
 @Page
 @Composable
 fun IndexPage() {
@@ -23,7 +24,6 @@ fun IndexPage() {
     var projectTitle by remember { mutableStateOf("Untitled Design") }
     var hasImage by remember { mutableStateOf(false) }
 
-    // Canvas and history stored in MutableState so Compose sees them
     val canvasRef = remember { mutableStateOf<dynamic>(null) }
     val historyRef = remember { mutableStateOf<dynamic>(null) }
     val cropRectRef = remember { mutableStateOf<dynamic>(null) }
@@ -43,9 +43,7 @@ fun IndexPage() {
         (document.getElementById("photocraft-file-input") as? HTMLInputElement)?.click()
     }
 
-    //  Tool selection
     fun selectTool(tool: ActiveTool) {
-        // Auto-cancel crop when leaving the crop tool
         if (activeTool == ActiveTool.CROP && tool != ActiveTool.CROP) {
             val cropRect = cropRectRef.value
             if (cropRect != null) {
@@ -75,19 +73,14 @@ fun IndexPage() {
         }
     }
 
-    // Save action
     val onSave: () -> Unit = {
         val canvas = canvasRef.value
-        if (canvas != null) {
-            fabricSaveJson(canvas, "$projectTitle.json")
-        }
+        if (canvas != null) fabricSaveJson(canvas, "$projectTitle.json")
     }
 
     val onExport: () -> Unit = {
         val canvas = canvasRef.value
-        if (canvas != null) {
-            fabricExport(canvas, "$projectTitle.png")
-        }
+        if (canvas != null) fabricExport(canvas, "$projectTitle.png")
     }
 
     // App Shell (Column: header + body)
@@ -95,8 +88,6 @@ fun IndexPage() {
         modifier = AppShellStyle.toModifier(),
         horizontalAlignment = Alignment.Start
     ) {
-
-        // Header
         TopHeader(
             title = projectTitle,
             canUndo = canUndo,
@@ -109,7 +100,6 @@ fun IndexPage() {
             onExport = onExport
         )
 
-        //  Body Row: Sidebar | Canvas | Properties
         Row(
             modifier = AppBodyStyle.toModifier(),
             horizontalArrangement = Arrangement.Start
@@ -145,12 +135,11 @@ fun IndexPage() {
                 canvas = canvasRef.value,
                 hasImage = hasImage,
                 cropRectRef = cropRectRef,
+                historyRef = historyRef,
                 onChanged = { refreshHistoryState() },
                 onUploadClick = { openFileDialog() },
                 onCropApplied = { refreshHistoryState() },
             )
         }
-
     }
 }
-

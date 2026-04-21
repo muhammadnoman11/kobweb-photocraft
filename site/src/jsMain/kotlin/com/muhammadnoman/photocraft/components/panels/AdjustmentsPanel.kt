@@ -1,6 +1,7 @@
 package com.muhammadnoman.photocraft.components.panels
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,29 +14,39 @@ import com.muhammadnoman.photocraft.components.widgets.SliderRow
 import com.muhammadnoman.photocraft.models.AdjustmentState
 import com.muhammadnoman.photocraft.utils.fabricApplyAdjustments
 import com.muhammadnoman.photocraft.utils.fabricGetAdjustmentState
+import com.muhammadnoman.photocraft.utils.fabricSaveHistorySnapshot
 import com.muhammadnoman.photocraft.utils.getActiveImageObject
 import com.varabyte.kobweb.compose.foundation.layout.Column
 import com.varabyte.kobweb.compose.ui.Modifier
 import com.varabyte.kobweb.compose.ui.modifiers.fillMaxWidth
 import com.varabyte.kobweb.compose.ui.modifiers.padding
+import kotlinx.browser.window
 import org.jetbrains.compose.web.css.px
 
-
 @Composable
-fun AdjustmentsPanel(canvas: dynamic, onAdjustmentChanged: () -> Unit) {
-    // On first composition (or when canvas/image changes) restore persisted state
+fun AdjustmentsPanel(canvas: dynamic, historyRef: MutableState<dynamic>, onAdjustmentChanged: () -> Unit) {
     var adj by remember(canvas) {
         val restored = if (canvas != null) fabricGetAdjustmentState(canvas) else null
         mutableStateOf(restored ?: AdjustmentState())
     }
 
+    // Debounce timer ref for slider-drag coalescing
+    val debounceTimer = remember { mutableStateOf<Int?>(null) }
+
     fun applyAdj(new: AdjustmentState) {
         adj = new
         if (canvas != null) {
             val img = getActiveImageObject(canvas)
-            if (img != null) fabricApplyAdjustments(img, new)
+            if (img != null) {
+                fabricApplyAdjustments(img, new)
+                // Debounce history save: wait 400ms after last slider move
+                debounceTimer.value?.let { window.clearTimeout(it) }
+                debounceTimer.value = window.setTimeout({
+                    fabricSaveHistorySnapshot(historyRef)
+                    onAdjustmentChanged()
+                }, 400)
+            }
         }
-        onAdjustmentChanged()
     }
 
     Column(modifier = Modifier.fillMaxWidth().padding(16.px)) {
@@ -66,7 +77,14 @@ fun AdjustmentsPanel(canvas: dynamic, onAdjustmentChanged: () -> Unit) {
 
         PanelDivider()
         ActionButton("Reset Adjustments", "fa-rotate-left", onClick = {
-            applyAdj(AdjustmentState())
+            val reset = AdjustmentState()
+            adj = reset
+            if (canvas != null) {
+                val img = getActiveImageObject(canvas)
+                if (img != null) fabricApplyAdjustments(img, reset)
+            }
+            fabricSaveHistorySnapshot(historyRef)
+            onAdjustmentChanged()
         })
     }
 }

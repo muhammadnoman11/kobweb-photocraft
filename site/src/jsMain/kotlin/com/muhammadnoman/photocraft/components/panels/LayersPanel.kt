@@ -2,6 +2,7 @@ package com.muhammadnoman.photocraft.components.panels
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,7 +57,7 @@ import org.jetbrains.compose.web.dom.Text
 
 
 @Composable
-fun LayersPanel(canvas: dynamic, onChanged: () -> Unit) {
+fun LayersPanel(canvas: dynamic, historyRef: MutableState<dynamic>, onChanged: () -> Unit) {
     var layers by remember { mutableStateOf(listOf<LayerItem>()) }
 
     LaunchedEffect(canvas) {
@@ -64,7 +65,6 @@ fun LayersPanel(canvas: dynamic, onChanged: () -> Unit) {
     }
 
     Column(modifier = Modifier.fillMaxWidth().padding(16.px)) {
-
         Row(
             modifier = Modifier.fillMaxWidth().margin(bottom = 14.px),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -118,11 +118,15 @@ fun LayersPanel(canvas: dynamic, onChanged: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 I(attrs = {
-                    classes("fa-solid", "fa-layer-group")
-                    style {
-                        property("font-size", "24px"); property("color", "#555555")
-                        property("opacity", "0.4"); property("display", "block"); property("margin-bottom", "8px")
-                    }
+                    classes("fa-solid", "fa-layer-group"); style {
+                    property(
+                        "font-size",
+                        "24px"
+                    ); property("color", "#555555"); property("opacity", "0.4"); property(
+                    "display",
+                    "block"
+                ); property("margin-bottom", "8px")
+                }
                 })
                 SpanText("No layers yet", modifier = Modifier.fontSize(12.px).color(Color.rgb(0x555555)))
             }
@@ -144,62 +148,45 @@ fun LayersPanel(canvas: dynamic, onChanged: () -> Unit) {
 @Composable
 private fun LayerRowItem(layer: LayerItem, index: Int, onVisibilityToggle: (Int, Boolean) -> Unit) {
     val typeIcon = when (layer.type) {
-        "image" -> "fa-image"
-        "i-text", "text" -> "fa-t"
-        "rect" -> "fa-square"
-        "circle" -> "fa-circle"
-        "triangle" -> "fa-play"
-        "line" -> "fa-minus"
-        "polygon" -> "fa-star"
-        else -> "fa-layer-group"
+        "image" -> "fa-image"; "i-text", "text" -> "fa-t"; "rect" -> "fa-square"
+        "circle" -> "fa-circle"; "triangle" -> "fa-play"; "line" -> "fa-minus"
+        "polygon" -> "fa-star"; else -> "fa-layer-group"
     }
 
-    Row(
-        modifier = LayerRowStyle.toModifier().fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(modifier = LayerRowStyle.toModifier().fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(
-            modifier = Modifier
-                .cursor(Cursor.Pointer)
-                .flexShrink(0)
-                .onClick { onVisibilityToggle(index, !layer.visible) },
-            contentAlignment = Alignment.Center
+            modifier = Modifier.cursor(Cursor.Pointer).flexShrink(0)
+                .onClick { onVisibilityToggle(index, !layer.visible) }, contentAlignment = Alignment.Center
         ) {
             I(attrs = {
-                classes("fa-solid", if (layer.visible) "fa-eye" else "fa-eye-slash")
-                style {
-                    property("font-size", "11px")
-                    property("color", if (layer.visible) "#888888" else "#555555")
-                }
+                classes(
+                    "fa-solid",
+                    if (layer.visible) "fa-eye" else "fa-eye-slash"
+                ); style {
+                property("font-size", "11px"); property(
+                "color",
+                if (layer.visible) "#888888" else "#555555"
+            )
+            }
             })
         }
-
         I(attrs = {
-            classes("fa-solid", typeIcon)
-            style { property("font-size", "11px"); property("color", "#555555"); property("width", "12px") }
+            classes("fa-solid", typeIcon); style {
+            property("font-size", "11px"); property(
+            "color",
+            "#555555"
+        ); property("width", "12px")
+        }
         })
-
         SpanText(
             layer.name,
-            modifier = Modifier
-                .fontSize(12.px)
-                .color(if (layer.visible) Color.rgb(0xf0f0f0) else Color.rgb(0x555555))
-                .weight(1)
-                .overflow(Overflow.Hidden)
-                .textOverflow(TextOverflow.Ellipsis)
-                .whiteSpace(WhiteSpace.NoWrap)
+            modifier = Modifier.fontSize(12.px).color(if (layer.visible) Color.rgb(0xf0f0f0) else Color.rgb(0x555555))
+                .weight(1).overflow(Overflow.Hidden).textOverflow(TextOverflow.Ellipsis).whiteSpace(WhiteSpace.NoWrap)
                 .textDecorationLine(if (layer.visible) TextDecorationLine.None else TextDecorationLine.LineThrough)
         )
-
         SpanText(
-            index.toString(),
-            modifier = Modifier
-                .fontSize(9.px)
-                .fontFamily("'JetBrains Mono'", "monospace")
-                .color(Color.rgb(0x555555))
-                .backgroundColor(Color.rgb(0x0f0f0f))
-                .padding(1.px, 4.px)
-                .borderRadius(3.px)
+            index.toString(), modifier = Modifier.fontSize(9.px).fontFamily("'JetBrains Mono'", "monospace")
+                .color(Color.rgb(0x555555)).backgroundColor(Color.rgb(0x0f0f0f)).padding(1.px, 4.px).borderRadius(3.px)
                 .flexShrink(0)
         )
     }
@@ -207,7 +194,7 @@ private fun LayerRowItem(layer: LayerItem, index: Int, onVisibilityToggle: (Int,
 
 @Composable
 private fun LayerActionBtn(icon: String, title: String, onClick: () -> Unit) {
-    org.jetbrains.compose.web.dom.Button(attrs = {
+    Button(attrs = {
         onClick { onClick() }
         title(title)
         style {

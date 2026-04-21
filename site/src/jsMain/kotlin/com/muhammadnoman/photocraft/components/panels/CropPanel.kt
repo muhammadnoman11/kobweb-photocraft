@@ -13,6 +13,7 @@ import com.muhammadnoman.photocraft.components.widgets.PanelTitle
 import com.muhammadnoman.photocraft.components.widgets.SectionLabel
 import com.muhammadnoman.photocraft.utils.fabricApplyCrop
 import com.muhammadnoman.photocraft.utils.fabricCancelCrop
+import com.muhammadnoman.photocraft.utils.fabricSaveHistorySnapshot
 import com.muhammadnoman.photocraft.utils.fabricStartCrop
 import com.varabyte.kobweb.compose.foundation.layout.Column
 import com.varabyte.kobweb.compose.foundation.layout.Row
@@ -38,11 +39,11 @@ import org.jetbrains.compose.web.dom.Div
 import org.jetbrains.compose.web.dom.I
 import org.jetbrains.compose.web.dom.Text
 
-
 @Composable
 fun CropPanel(
     canvas: dynamic,
     cropRectRef: MutableState<dynamic>,
+    historyRef: MutableState<dynamic>,
     onCropApplied: () -> Unit,
     onCropCancelled: () -> Unit,
 ) {
@@ -71,16 +72,11 @@ fun CropPanel(
             }
         }) {
             listOf(
-                "free" to "Free",
-                "1:1" to "Square",
-                "4:3" to "4:3",
-                "16:9" to "16:9",
-                "3:2" to "3:2",
-                "9:16" to "9:16"
+                "free" to "Free", "1:1" to "Square", "4:3" to "4:3",
+                "16:9" to "16:9", "3:2" to "3:2", "9:16" to "9:16"
             ).forEach { (ratio, label) ->
                 AspectBtn(label, selectedAspect == ratio) {
                     selectedAspect = ratio
-                    // If already cropping, restart with new aspect ratio
                     if (isCropping && canvas != null) {
                         fabricCancelCrop(canvas, cropRectRef.value)
                         cropRectRef.value = fabricStartCrop(canvas, ratio)
@@ -99,21 +95,20 @@ fun CropPanel(
                 }
             })
         } else {
-            // Hint box
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
+                modifier = Modifier.fillMaxWidth()
                     .backgroundColor(Color.rgba(0xc8, 0x92, 0x3f, 38))
                     .border(1.px, LineStyle.Solid, Color.rgba(0xc8, 0x92, 0x3f, 76))
-                    .borderRadius(8.px)
-                    .padding(10.px, 12.px)
-                    .margin(bottom = 10.px)
-                    .gap(6.px),
+                    .borderRadius(8.px).padding(10.px, 12.px).margin(bottom = 10.px).gap(6.px),
                 verticalAlignment = Alignment.Top
             ) {
                 I(attrs = {
-                    classes("fa-solid", "fa-info-circle")
-                    style { property("color", "#c8923f"); property("margin-top", "2px") }
+                    classes("fa-solid", "fa-info-circle"); style {
+                    property(
+                        "color",
+                        "#c8923f"
+                    ); property("margin-top", "2px")
+                }
                 })
                 SpanText(
                     "Drag the orange handles to resize the crop area, then click Apply.",
@@ -128,6 +123,7 @@ fun CropPanel(
                         fabricApplyCrop(canvas, rect)
                         cropRectRef.value = null
                         isCropping = false
+                        fabricSaveHistorySnapshot(historyRef)
                         onCropApplied()
                     }
                 })
@@ -144,39 +140,31 @@ fun CropPanel(
         SectionLabel("QUICK ACTIONS")
         Row(modifier = Modifier.gap(6.px).flexWrap(FlexWrap.Wrap)) {
             QuickActionBtn("Flip H", "fa-left-right") {
-                if (canvas != null) js(
-                    "var a=canvas.getActiveObject();" +
-                            "if(!a)canvas.getObjects().forEach(function(o){if(o.type==='image')a=o;});" +
-                            "if(a){a.set('flipX',!a.flipX);canvas.requestRenderAll();}"
-                )
+                if (canvas != null) {
+                    js("var a=canvas.getActiveObject();if(!a)canvas.getObjects().forEach(function(o){if(o.type==='image')a=o;});if(a){a.set('flipX',!a.flipX);canvas.requestRenderAll();}")
+                    fabricSaveHistorySnapshot(historyRef)
+                }
             }
             QuickActionBtn("Flip V", "fa-up-down") {
-                if (canvas != null) js(
-                    "var a=canvas.getActiveObject();" +
-                            "if(!a)canvas.getObjects().forEach(function(o){if(o.type==='image')a=o;});" +
-                            "if(a){a.set('flipY',!a.flipY);canvas.requestRenderAll();}"
-                )
+                if (canvas != null) {
+                    js("var a=canvas.getActiveObject();if(!a)canvas.getObjects().forEach(function(o){if(o.type==='image')a=o;});if(a){a.set('flipY',!a.flipY);canvas.requestRenderAll();}")
+                    fabricSaveHistorySnapshot(historyRef)
+                }
             }
             QuickActionBtn("Rotate 90°", "fa-rotate-right") {
-                if (canvas != null) js(
-                    "var a=canvas.getActiveObject();" +
-                            "if(!a)canvas.getObjects().forEach(function(o){if(o.type==='image')a=o;});" +
-                            "if(a){a.rotate((a.angle+90)%360);canvas.requestRenderAll();}"
-                )
+                if (canvas != null) {
+                    js("var a=canvas.getActiveObject();if(!a)canvas.getObjects().forEach(function(o){if(o.type==='image')a=o;});if(a){a.rotate((a.angle+90)%360);canvas.requestRenderAll();}")
+                    fabricSaveHistorySnapshot(historyRef)
+                }
             }
         }
 
         PanelDivider()
         SectionLabel("HOW TO CROP")
-        Column(
-            modifier = Modifier.gap(4.px),
-            horizontalAlignment = Alignment.Start
-        ) {
+        Column(modifier = Modifier.gap(4.px), horizontalAlignment = Alignment.Start) {
             listOf(
-                "1. Click 'Start Crop'",
-                "2. Drag orange handles to resize",
-                "3. Click 'Apply' to confirm",
-                "4. Cancel or switch tools to discard"
+                "1. Click 'Start Crop'", "2. Drag orange handles to resize",
+                "3. Click 'Apply' to confirm", "4. Cancel or switch tools to discard"
             ).forEach { line ->
                 SpanText(line, modifier = Modifier.fontSize(11.px).color(Color.rgb(0x555555)).lineHeight(1.8))
             }
@@ -193,14 +181,10 @@ private fun AspectBtn(label: String, active: Boolean, onClick: () -> Unit) {
             property("border-radius", "4px")
             property("background", if (active) "rgba(200,146,63,0.15)" else "transparent")
             property("color", if (active) "#c8923f" else "#888888")
-            property("font-family", "'Space Grotesk', sans-serif")
-            property("font-size", "11px")
+            property("font-family", "'Space Grotesk', sans-serif"); property("font-size", "11px")
             property("font-weight", if (active) "600" else "400")
-            property("padding", "6px")
-            property("cursor", "pointer")
-            property("transition", "all 0.2s ease")
-            property("outline", "none")
-            property("text-align", "center")
+            property("padding", "6px"); property("cursor", "pointer")
+            property("transition", "all 0.2s ease"); property("outline", "none"); property("text-align", "center")
         }
     }) { Text(label) }
 }
