@@ -62,7 +62,7 @@ fun StickersPanel(canvas: dynamic, historyRef: MutableState<dynamic>, onChanged:
                 style {
                     property("display", "grid"); property(
                     "grid-template-columns",
-                    "repeat(4, 1fr)"
+                    "repeat(5, 1fr)"
                 ); property("gap", "8px")
                 }
             }) {

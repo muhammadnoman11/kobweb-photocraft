@@ -51,7 +51,7 @@ fun PropertiesPanel(
 
             // "Upload first" notice when panel requires an image
             Box(modifier = PanelContentStyle.toModifier().flexGrow(1).overflow(Overflow.Auto).minHeight(0.px)) {
-                if (isDisabled) {
+            if (isDisabled) {
                     Column(
                         modifier = Modifier.position(Position.Sticky).top(0.px).zIndex(20).fillMaxWidth()
                             .backgroundColor(Color.rgba(15, 15, 15, 220)).padding(32.px, 24.px)
@@ -75,7 +75,7 @@ fun PropertiesPanel(
 
                 // Panel content (dimmed but still rendered when disabled)
                 Box(
-                    modifier = Modifier.then(
+                    modifier = Modifier.fillMaxWidth().then(
                         if (isDisabled) Modifier.opacity(0.4f).pointerEvents(PointerEvents.None) else Modifier
                     ).padding(bottom = 24.px)
                 ) {

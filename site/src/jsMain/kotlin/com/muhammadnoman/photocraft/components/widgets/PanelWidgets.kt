@@ -60,7 +60,8 @@ fun SliderRow(
     Column(modifier = Modifier.fillMaxWidth().margin(bottom = 14.px)) {
         // Label + value badge
         Row(
-            modifier = SliderLabelRowStyle.toModifier().fillMaxWidth(),
+            modifier = SliderLabelRowStyle.toModifier().fillMaxWidth()
+                .margin { bottom(12.px) },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -73,6 +74,7 @@ fun SliderRow(
             SpanText(
                 text = value.toInt().toString(),
                 modifier = SliderValueBadgeStyle.toModifier()
+                    .flexShrink(0)
             )
         }
 

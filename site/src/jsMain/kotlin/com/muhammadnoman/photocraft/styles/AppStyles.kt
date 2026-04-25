@@ -15,6 +15,7 @@ import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.css.AlignItems
 import org.jetbrains.compose.web.css.JustifyContent
 import com.varabyte.kobweb.compose.ui.graphics.Color
+import com.varabyte.kobweb.compose.ui.styleModifier
 
 
 // Global Silk Init
@@ -205,6 +206,7 @@ val PropertiesPanelStyle = CssStyle {
             // Single overflow() call — avoids the overflowY/zIndex resolution errors
             .overflow(Overflow.Hidden)
     }
+
     Breakpoint.MD {
         Modifier
             .width(240.px)
@@ -253,7 +255,12 @@ val PanelContentStyle = CssStyle.base {
         .flexGrow(1)
         .minHeight(0.px)
         .position(Position.Relative)
-        .overflow(Overflow.Auto)
+        .styleModifier {
+            property("overflow-x", "hidden")
+            property("overflow-y", "auto")
+            property("width", "100%")
+            property("box-sizing", "border-box")
+        }
 }
 
 val PanelTitleStyle = CssStyle.base {
@@ -398,12 +405,21 @@ val ToggleBtnStyle = CssStyle {
 
 
 val SliderLabelRowStyle = CssStyle.base {
+//    Modifier
+//        .display(DisplayStyle.Flex)
+//        .justifyContent(JustifyContent.SpaceBetween)
+//        .alignItems(AlignItems.Center)
+//        .margin(bottom = 6.px)
+
     Modifier
         .display(DisplayStyle.Flex)
         .justifyContent(JustifyContent.SpaceBetween)
         .alignItems(AlignItems.Center)
         .margin(bottom = 6.px)
+        .maxWidth(100.percent)   // ADD THIS
+        .overflow(Overflow.Hidden) // ADD THIS
 }
+
 
 val SliderValueBadgeStyle = CssStyle.base {
     Modifier
