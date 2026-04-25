@@ -123,43 +123,24 @@ fun injectFilterHelper() {
                 // --- Noise ---
                 if ((s.noise||0) > 0)
                     img.filters.push(new fabric.Image.filters.Noise({ noise: (s.noise||0)*1.5 }));
- 
-                // --- Highlights: brighten only light tones using Gamma ---
-//                var hl = (s.highlights||0);
-//                if (hl !== 0) {
-//                    // positive highlights → lift whites; negative → pull highlights down
-////                    var hlGamma = hl > 0
-////                        ? [1, 1, 1 + hl/200]   // lift bright channel
-////                        : [1, 1, 1 + hl/100];   // darken highlights
-//                       var hlGamma;
-//                       if (hl > 0) {
-//                           hlGamma = [1, 1, 1 + hl/200];
-//                       } else {
-//                           hlGamma = [1, 1, 1 + hl/100];
-//                       }
-//                    // Use a ColorMatrix that simulates highlight control:
-//                    // We boost/reduce the upper tonal range via a custom gamma on a composite channel
-//                    var hlFactor = 1 + (hl / 150);
-//                    img.filters.push(new fabric.Image.filters.Gamma({ gamma: [
-//                        Math.max(0.1, hlFactor > 1 ? 1 + (hlFactor-1)*0.5 : hlFactor),
-//                        Math.max(0.1, hlFactor > 1 ? 1 + (hlFactor-1)*0.5 : hlFactor),
-//                        Math.max(0.1, hlFactor > 1 ? 1 + (hlFactor-1)*0.5 : hlFactor)
-//                    ]}));
-//                }
- 
-                // --- Shadows: brighten/darken only dark tones using Brightness + blend ---
-//                var sh = (s.shadows||0);
-//                if (sh !== 0) {
-//                    // Shadows: use a small brightness offset combined with a gamma curve
-//                    // to primarily affect dark areas. We approximate with Brightness + Gamma inverse.
-//                    var shBrightness = sh / 400; // small offset
-//                    var shGamma = sh > 0
-//                        ? Math.max(0.3, 1 - sh/200)   // gamma < 1 lifts shadows
-//                        : Math.min(3.0, 1 - sh/200);  // gamma > 1 crushes shadows
-//                    img.filters.push(new fabric.Image.filters.Gamma({ gamma: [shGamma, shGamma, shGamma] }));
-//                    if (Math.abs(shBrightness) > 0.01)
-//                        img.filters.push(new fabric.Image.filters.Brightness({ brightness: shBrightness }));
-//                }
+
+                 // --- Highlights
+                 var hl = (s.highlights||0);
+                 if (hl !== 0) {
+                     var hlFactor = 1 + (hl / 150);
+                     var hlG = Math.max(0.1, hlFactor > 1 ? 1 + (hlFactor - 1) * 0.5 : hlFactor);
+                     img.filters.push(new fabric.Image.filters.Gamma({ gamma: [hlG, hlG, hlG] }));
+                 }
+                 
+                 // --- Shadows
+                 var sh = (s.shadows||0);
+                 if (sh !== 0) {
+                     var shGamma = sh > 0 ? Math.max(0.3, 1 - sh/200) : Math.min(3.0, 1 - sh/200);
+                     var shBrightness = sh / 400;
+                     img.filters.push(new fabric.Image.filters.Gamma({ gamma: [shGamma, shGamma, shGamma] }));
+                     if (Math.abs(shBrightness) > 0.01)
+                         img.filters.push(new fabric.Image.filters.Brightness({ brightness: shBrightness }));
+                 }
  
                 // --- Temperature: warm (positive) = more red/yellow, cool (negative) = more blue ---
                 var temp = (s.temperature||0);
