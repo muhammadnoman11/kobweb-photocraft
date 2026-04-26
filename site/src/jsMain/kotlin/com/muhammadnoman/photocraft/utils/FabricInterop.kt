@@ -535,7 +535,7 @@ fun fabricStartCrop(canvas: dynamic, aspectRatio: String = "free"): dynamic {
     )
 }
 
-fun fabricApplyCrop(canvas: dynamic, cropRect: dynamic) {
+fun fabricApplyCrop(canvas: dynamic, cropRect: dynamic, historyRef: MutableState<dynamic>, onDone: () -> Unit) {
     js(
         """
         (function() {
@@ -548,50 +548,112 @@ fun fabricApplyCrop(canvas: dynamic, cropRect: dynamic) {
                 canvas.requestRenderAll();
                 return;
             }
- 
+
             var cropLeft   = cropRect.left;
             var cropTop    = cropRect.top;
             var cropWidth  = cropRect.getScaledWidth();
             var cropHeight = cropRect.getScaledHeight();
- 
-            var imgLeft = activeImg.left;
-            var imgTop  = activeImg.top;
+
+            var imgLeft   = activeImg.left;
+            var imgTop    = activeImg.top;
             var imgScaleX = activeImg.scaleX || 1;
             var imgScaleY = activeImg.scaleY || 1;
- 
-            var localX = (cropLeft - imgLeft) / imgScaleX;
-            var localY = (cropTop  - imgTop)  / imgScaleY;
-            var localW = cropWidth  / imgScaleX;
-            var localH = cropHeight / imgScaleY;
- 
-            var imgNatW = activeImg.width;
-            var imgNatH = activeImg.height;
-            localX = Math.max(0, Math.min(localX, imgNatW));
-            localY = Math.max(0, Math.min(localY, imgNatH));
-            localW = Math.max(1, Math.min(localW, imgNatW - localX));
-            localH = Math.max(1, Math.min(localH, imgNatH - localY));
- 
-            activeImg.set({
-                cropX: localX,
-                cropY: localY,
-                width: localW,
-                height: localH,
-                left: cropLeft,
-                top: cropTop,
-                scaleX: 1,
-                scaleY: 1,
-                originX: 'left',
-                originY: 'top'
-            });
- 
-            activeImg.setCoords();
+
+            var srcEl = activeImg.getElement ? activeImg.getElement() : activeImg._element;
+            var natW  = srcEl.naturalWidth  || srcEl.width;
+            var natH  = srcEl.naturalHeight || srcEl.height;
+
+            var existingCropX = activeImg.cropX || 0;
+            var existingCropY = activeImg.cropY || 0;
+
+            var srcX = existingCropX + (cropLeft  - imgLeft) / imgScaleX;
+            var srcY = existingCropY + (cropTop   - imgTop)  / imgScaleY;
+            var srcW = cropWidth  / imgScaleX;
+            var srcH = cropHeight / imgScaleY;
+
+            srcX = Math.max(0, Math.min(srcX, natW));
+            srcY = Math.max(0, Math.min(srcY, natH));
+            srcW = Math.max(1, Math.min(srcW, natW - srcX));
+            srcH = Math.max(1, Math.min(srcH, natH - srcY));
+
+            var offscreen = document.createElement('canvas');
+            offscreen.width  = Math.round(srcW);
+            offscreen.height = Math.round(srcH);
+            var ctx2 = offscreen.getContext('2d');
+            ctx2.drawImage(srcEl, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+
+            var savedFilterState    = activeImg._pcFilterState;
+            var savedActivePresetId = activeImg._pcActivePresetId;
+
+            var hist = historyRef.value;
+
+            // Lock history completely — no debounce, no auto-save until we're done
+            if (hist) { hist._locked = true; clearTimeout(hist._debounceTimer); }
+
+            canvas.remove(activeImg);
             canvas.remove(cropRect);
- 
-            canvas.setDimensions({ width: Math.round(cropWidth), height: Math.round(cropHeight) });
-            activeImg.set({ left: 0, top: 0 });
-            activeImg.setCoords();
- 
-            canvas.requestRenderAll();
+
+            var maxW = canvas.__pcMaxWidth  || window.innerWidth  - 320;
+            var maxH = canvas.__pcMaxHeight || window.innerHeight - 100;
+            maxW = Math.max(300, maxW);
+            maxH = Math.max(250, maxH);
+            var scale = Math.min(maxW / srcW, maxH / srcH, 1);
+            var newCanvasW = Math.round(srcW * scale);
+            var newCanvasH = Math.round(srcH * scale);
+
+            var dataUrl = offscreen.toDataURL('image/png');
+
+            fabric.Image.fromURL(dataUrl, function(newImg) {
+                newImg.set({
+                    left: 0, top: 0,
+                    originX: 'left', originY: 'top',
+                    scaleX: scale, scaleY: scale,
+                    selectable: false, evented: false,
+                    hasControls: false, hasBorders: false,
+                    lockMovementX: true, lockMovementY: true,
+                    lockScalingX: true, lockScalingY: true,
+                    lockRotation: true, hoverCursor: 'default'
+                });
+
+                newImg._pcFilterState = savedFilterState || {
+                    brightness:0, contrast:0, saturation:0, hue:0,
+                    blur:0, noise:0, opacity:100, grayscale:0, sepia:0,
+                    highlights:0, shadows:0, temperature:0, tint:0, vignette:0,
+                    presetBrightness:0, presetContrast:0, presetSaturation:0, presetBlur:0
+                };
+                newImg._pcActivePresetId = savedActivePresetId || 'none';
+
+                canvas.__pcBaseImage = newImg;
+                canvas.setDimensions({ width: newCanvasW, height: newCanvasH });
+                canvas.add(newImg);
+                canvas.discardActiveObject();
+
+                if (window._pcRebuildFilters && newImg._pcFilterState) {
+                    window._pcRebuildFilters(newImg, fabric);
+                }
+
+                canvas.requestRenderAll();
+
+                // Wait for render to settle, THEN save snapshot, THEN unlock, THEN notify Kotlin
+                setTimeout(function() {
+                    if (hist) {
+                        // Temporarily disable _locked just for saveSnapshot
+                        hist._locked = false;
+                        hist._saving = false;
+                        hist.saveSnapshot();
+                        // Re-lock briefly so Kotlin's onDone recompose doesn't trigger
+                        // AdjustmentsPanel debounce before history is fully stable
+                        hist._locked = true;
+                        setTimeout(function() {
+                            hist._locked = false;
+                            onDone();
+                        }, 50);
+                    } else {
+                        onDone();
+                    }
+                }, 150);
+
+            }, { crossOrigin: 'anonymous' });
         })()
     """
     )
@@ -762,83 +824,190 @@ fun fabricSetTransparentBackground(canvas: dynamic) {
 //     Kotlin after the JS filter rebuild completes.
 // ============================================================
 
+//fun setupFabricHistory(canvas: dynamic): dynamic {
+//    return js(
+//        """
+//        var history = { states:[], current:-1, maxStates:100 };
+//        history._saving = false;
+//        history._debounceTimer = null;
+//
+//        // Save a snapshot immediately (used for explicit actions)
+//        history.saveSnapshot = function() {
+//            if (history._saving) return;
+//            history._saving = true;
+//            // Trim redo branch
+//            if (history.current < history.states.length - 1)
+//                history.states.splice(history.current + 1);
+//            var json = canvas.toJSON([
+//                '_pcFilterState','_pcActivePresetId','selectable','evented',
+//                'hasControls','hasBorders','lockMovementX','lockMovementY',
+//                'lockScalingX','lockScalingY','lockRotation','hoverCursor',
+//                'flipX','flipY','angle'
+//            ]);
+//            // Deep-clone so mutations to live objects don't corrupt history
+//            history.states.push(JSON.parse(JSON.stringify(json)));
+//            if (history.states.length > history.maxStates) history.states.shift();
+//            else history.current++;
+//            history._saving = false;
+//        };
+//
+//        // Debounced save — coalesces rapid events (e.g. object:modified during drag)
+//        history._debouncedSave = function() {
+//            clearTimeout(history._debounceTimer);
+//            history._debounceTimer = setTimeout(function() {
+//                history.saveSnapshot();
+//            }, 300);
+//        };
+//
+//        history.undo = function() {
+//            if (history.current <= 0) return false;
+//            history.current--;
+//            history._saving = true;
+//            canvas.loadFromJSON(history.states[history.current], function() {
+//                canvas.requestRenderAll();
+//                history._saving = false;
+//            });
+//            return true;
+//        };
+//
+//        history.redo = function() {
+//            if (history.current >= history.states.length - 1) return false;
+//            history.current++;
+//            history._saving = true;
+//            canvas.loadFromJSON(history.states[history.current], function() {
+//                canvas.requestRenderAll();
+//                history._saving = false;
+//            });
+//            return true;
+//        };
+//
+//        history.canUndo = function() { return history.current > 0; };
+//        history.canRedo = function() { return history.current < history.states.length - 1; };
+//
+//        // Only structural changes (add/remove/move/resize/rotate) auto-save via debounce.
+//        // Filter and adjustment changes are saved explicitly by Kotlin callers.
+//        canvas.on('object:added',    function(e) {
+//            // Don't save when the crop rect is added
+//            if (e.target && e.target.id === '_pcCropRect') return;
+//            if (!history._saving) history._debouncedSave();
+//        });
+//        canvas.on('object:modified', function(e) {
+//            if (e.target && e.target.id === '_pcCropRect') return;
+//            if (!history._saving) history._debouncedSave();
+//        });
+//        canvas.on('object:removed',  function(e) {
+//            if (e.target && e.target.id === '_pcCropRect') return;
+//            if (!history._saving) history._debouncedSave();
+//        });
+//
+//        // Save initial blank state
+//        history.saveSnapshot();
+//        history;
+//    """
+//    )
+//}
+
 fun setupFabricHistory(canvas: dynamic): dynamic {
     return js(
         """
-        var history = { states:[], current:-1, maxStates:100 };
+        var history = { states: [], current: -1, maxStates: 50 };
         history._saving = false;
+        history._locked = false;
         history._debounceTimer = null;
- 
-        // Save a snapshot immediately (used for explicit actions)
+
         history.saveSnapshot = function() {
-            if (history._saving) return;
+            if (history._saving || history._locked) return;
             history._saving = true;
-            // Trim redo branch
+
             if (history.current < history.states.length - 1)
                 history.states.splice(history.current + 1);
+
             var json = canvas.toJSON([
                 '_pcFilterState','_pcActivePresetId','selectable','evented',
                 'hasControls','hasBorders','lockMovementX','lockMovementY',
                 'lockScalingX','lockScalingY','lockRotation','hoverCursor',
-                'flipX','flipY','angle'
+                'flipX','flipY','angle','src'
             ]);
-            // Deep-clone so mutations to live objects don't corrupt history
-            history.states.push(JSON.parse(JSON.stringify(json)));
+
+            var snapshot = {
+                canvasWidth:  canvas.getWidth(),
+                canvasHeight: canvas.getHeight(),
+                json: JSON.parse(JSON.stringify(json))
+            };
+
+            history.states.push(snapshot);
             if (history.states.length > history.maxStates) history.states.shift();
             else history.current++;
+
             history._saving = false;
         };
- 
-        // Debounced save — coalesces rapid events (e.g. object:modified during drag)
+
         history._debouncedSave = function() {
+            if (history._locked) return;
             clearTimeout(history._debounceTimer);
             history._debounceTimer = setTimeout(function() {
-                history.saveSnapshot();
+                if (!history._locked) history.saveSnapshot();
             }, 300);
         };
- 
-        history.undo = function() {
+
+        history._restore = function(snapshot, callback) {
+            history._locked = true;
+            clearTimeout(history._debounceTimer);
+
+            canvas.setDimensions({
+                width:  snapshot.canvasWidth,
+                height: snapshot.canvasHeight
+            });
+
+            canvas.loadFromJSON(snapshot.json, function() {
+                canvas.getObjects().forEach(function(obj) {
+                    if (obj.type === 'image') {
+                        canvas.__pcBaseImage = obj;
+                        if (window._pcRebuildFilters && obj._pcFilterState) {
+                            window._pcRebuildFilters(obj, fabric);
+                        }
+                    }
+                });
+                canvas.requestRenderAll();
+                // Unlock AFTER render settles
+                setTimeout(function() {
+                    history._locked = false;
+                    history._saving = false;
+                    if (callback) callback();
+                }, 100);
+            });
+        };
+
+        history.undo = function(callback) {
             if (history.current <= 0) return false;
             history.current--;
-            history._saving = true;
-            canvas.loadFromJSON(history.states[history.current], function() {
-                canvas.requestRenderAll();
-                history._saving = false;
-            });
+            history._restore(history.states[history.current], callback);
             return true;
         };
- 
-        history.redo = function() {
+
+        history.redo = function(callback) {
             if (history.current >= history.states.length - 1) return false;
             history.current++;
-            history._saving = true;
-            canvas.loadFromJSON(history.states[history.current], function() {
-                canvas.requestRenderAll();
-                history._saving = false;
-            });
+            history._restore(history.states[history.current], callback);
             return true;
         };
- 
+
         history.canUndo = function() { return history.current > 0; };
         history.canRedo = function() { return history.current < history.states.length - 1; };
- 
-        // Only structural changes (add/remove/move/resize/rotate) auto-save via debounce.
-        // Filter and adjustment changes are saved explicitly by Kotlin callers.
+
         canvas.on('object:added',    function(e) {
-            // Don't save when the crop rect is added
             if (e.target && e.target.id === '_pcCropRect') return;
-            if (!history._saving) history._debouncedSave();
+            if (!history._saving && !history._locked) history._debouncedSave();
         });
         canvas.on('object:modified', function(e) {
             if (e.target && e.target.id === '_pcCropRect') return;
-            if (!history._saving) history._debouncedSave();
+            if (!history._saving && !history._locked) history._debouncedSave();
         });
         canvas.on('object:removed',  function(e) {
             if (e.target && e.target.id === '_pcCropRect') return;
-            if (!history._saving) history._debouncedSave();
+            if (!history._saving && !history._locked) history._debouncedSave();
         });
- 
-        // Save initial blank state
+
         history.saveSnapshot();
         history;
     """
@@ -847,9 +1016,20 @@ fun setupFabricHistory(canvas: dynamic): dynamic {
 
 // Expose a Kotlin-callable helper to explicitly save a history snapshot
 // (called after every filter/adjustment/preset change)
+//fun fabricSaveHistorySnapshot(historyRef: MutableState<dynamic>) {
+//    val hist = historyRef.value ?: return
+//    js("hist.saveSnapshot()")
+//}
+
 fun fabricSaveHistorySnapshot(historyRef: MutableState<dynamic>) {
     val hist = historyRef.value ?: return
-    js("hist.saveSnapshot()")
+    js(
+        """
+        if (!hist._locked) {
+            hist.saveSnapshot();
+        }
+    """
+    )
 }
 
 // Touch support

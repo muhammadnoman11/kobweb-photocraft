@@ -214,11 +214,13 @@ fun initFabricCanvas(
             if (tag==='INPUT' || tag==='TEXTAREA') return;
             if ((e.ctrlKey||e.metaKey) && e.key==='z' && !e.shiftKey) {
                 e.preventDefault();
-                var h=histRef.value; if(h&&h.canUndo()){h.undo();onHistCb();}
+//                var h=histRef.value; if(h&&h.canUndo()){h.undo();onHistCb();}
+                var h=histRef.value; if(h&&h.canUndo()){h.undo(function(){onHistCb();});}
             }
             if ((e.ctrlKey||e.metaKey) && (e.key==='y'||(e.key==='z'&&e.shiftKey))) {
                 e.preventDefault();
-                var h=histRef.value; if(h&&h.canRedo()){h.redo();onHistCb();}
+//                var h=histRef.value; if(h&&h.canRedo()){h.redo();onHistCb();}
+                  var h=histRef.value; if(h&&h.canRedo()){h.redo(function(){onHistCb();});}
             }
             if (e.key==='Delete'||e.key==='Backspace') {
                 var active=fabricCanvas.getActiveObject();

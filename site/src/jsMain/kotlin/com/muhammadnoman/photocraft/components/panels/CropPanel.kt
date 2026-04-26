@@ -120,11 +120,17 @@ fun CropPanel(
                 ActionButton("Apply", "fa-check", variant = "primary", fullWidth = false, onClick = {
                     val rect = cropRectRef.value
                     if (canvas != null && rect != null) {
-                        fabricApplyCrop(canvas, rect)
-                        cropRectRef.value = null
-                        isCropping = false
-                        fabricSaveHistorySnapshot(historyRef)
-                        onCropApplied()
+//                        fabricApplyCrop(canvas, rect)
+//                        cropRectRef.value = null
+//                        isCropping = false
+//                        fabricSaveHistorySnapshot(historyRef)
+//                        onCropApplied()
+
+                        fabricApplyCrop(canvas, rect, historyRef) {
+                            cropRectRef.value = null
+                            isCropping = false
+                            onCropApplied()
+                        }
                     }
                 })
                 ActionButton("Cancel", "fa-xmark", variant = "danger", fullWidth = false, onClick = {

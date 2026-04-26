@@ -55,20 +55,36 @@ fun IndexPage() {
         if (tool == ActiveTool.UPLOAD) openFileDialog()
     }
 
+//    val onUndo: () -> Unit = {
+//        val hist = historyRef.value
+//        val canvas = canvasRef.value
+//        if (hist != null && canvas != null) {
+//            val didUndo = js("hist.undo()") as? Boolean ?: false
+//            if (didUndo) refreshHistoryState()
+//        }
+//    }
+//
+//    val onRedo: () -> Unit = {
+//        val hist = historyRef.value
+//        val canvas = canvasRef.value
+//        if (hist != null && canvas != null) {
+//            val didRedo = js("hist.redo()") as? Boolean ?: false
+//            if (didRedo) refreshHistoryState()
+//        }
+//    }
+
     val onUndo: () -> Unit = {
         val hist = historyRef.value
-        val canvas = canvasRef.value
-        if (hist != null && canvas != null) {
-            val didUndo = js("hist.undo()") as? Boolean ?: false
+        if (hist != null) {
+            val didUndo = js("hist.undo(function(){ })") as? Boolean ?: false
             if (didUndo) refreshHistoryState()
         }
     }
 
     val onRedo: () -> Unit = {
         val hist = historyRef.value
-        val canvas = canvasRef.value
-        if (hist != null && canvas != null) {
-            val didRedo = js("hist.redo()") as? Boolean ?: false
+        if (hist != null) {
+            val didRedo = js("hist.redo(function(){ })") as? Boolean ?: false
             if (didRedo) refreshHistoryState()
         }
     }
