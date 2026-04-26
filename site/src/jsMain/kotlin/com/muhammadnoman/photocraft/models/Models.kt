@@ -57,11 +57,11 @@ data class AdjustmentState(
 data class TextProperties(
     val text: String = "Your Text Here",
     val fontFamily: String = "Space Grotesk",
-    val fontSize: Double = 40.0,
+    val fontSize: Double = 30.0,
     val fontWeight: String = "normal",
     val fontStyle: String = "normal",
     val underline: Boolean = false,
-    val fill: String = "#ffffff",
+    val fill: String = "#e3e3e3",
     val stroke: String = "",
     val strokeWidth: Double = 0.0,
     val textAlign: String = "left",

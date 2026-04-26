@@ -38,50 +38,6 @@ import org.jetbrains.compose.web.dom.Div
 import org.jetbrains.compose.web.dom.I
 
 
-//@Composable
-//fun ShapesPanel(canvas: dynamic, historyRef: MutableState<dynamic>, onChanged: () -> Unit) {
-//    var shapeColor by remember { mutableStateOf("#c8923f") }
-//    var strokeColor by remember { mutableStateOf("#ffffff") }
-//    var strokeWidth by remember { mutableStateOf(0.0) }
-//
-//    Column(modifier = Modifier.fillMaxWidth().padding(16.px)) {
-//        PanelTitle("Shapes")
-//
-//        SectionLabel("BASIC SHAPES")
-//        Div(attrs = {
-//            style {
-//                property("display", "grid"); property("grid-template-columns", "repeat(4, 1fr)"); property(
-//                "gap",
-//                "8px"
-//            ); property("margin-bottom", "14px")
-//            }
-//        }) {
-//            listOf(
-//                ShapeType.RECTANGLE to ("fa-square" to "Rect"),
-//                ShapeType.CIRCLE to ("fa-circle" to "Circle"),
-//                ShapeType.TRIANGLE to ("fa-play" to "Tri"),
-//                ShapeType.LINE to ("fa-minus" to "Line"),
-//                ShapeType.STAR to ("fa-star" to "Star"),
-//                ShapeType.POLYGON to ("fa-diamond" to "Poly"),
-//                ShapeType.ARROW to ("fa-arrow-right" to "Arrow")
-//            ).forEach { (shapeType, pair) ->
-//                val (icon, label) = pair
-//                ShapeCardBtn(icon, label, onClick = {
-//                    if (canvas != null) {
-//                        fabricAddShape(canvas, shapeType, shapeColor); onChanged()
-//                    }
-//                })
-//            }
-//        }
-//
-//        PanelDivider()
-//        SectionLabel("APPEARANCE")
-//        ColorPickerRow("Fill Color", shapeColor) { shapeColor = it }
-//        ColorPickerRow("Stroke Color", strokeColor) { strokeColor = it }
-//        SliderRow("Stroke Width", strokeWidth, 0.0, 20.0, 1.0) { strokeWidth = it }
-//    }
-//}
-
 // Global registry for shape panel callbacks
 @Suppress("UnsafeCastFromDynamic")
 object ShapePanelCallbacks {
@@ -108,7 +64,7 @@ object ShapePanelCallbacks {
 @Composable
 fun ShapesPanel(canvas: dynamic, historyRef: MutableState<dynamic>, onChanged: () -> Unit) {
     var shapeColor by remember { mutableStateOf("#c8923f") }
-    var strokeColor by remember { mutableStateOf("#ffffff") }
+    var strokeColor by remember { mutableStateOf("#e3e3e3") }
     var strokeWidth by remember { mutableStateOf(0.0) }
     var lastSelectedId by remember { mutableStateOf("") }
 

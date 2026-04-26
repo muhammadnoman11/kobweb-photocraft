@@ -403,7 +403,7 @@ fun fabricUpdateTextObject(obj: dynamic, props: TextProperties) {
 }
 
 // Shapes
-fun fabricAddShape(canvas: dynamic, shapeType: ShapeType, fill: String = "#c8923f", stroke: String = "#ffffff", strokeWidth: Double = 0.0) {
+fun fabricAddShape(canvas: dynamic, shapeType: ShapeType, fill: String = "#c8923f", stroke: String = "#e3e3e3", strokeWidth: Double = 0.0) {
     val fabric = getFabric() ?: return
     val w = canvas.getWidth().unsafeCast<Double>()
     val h = canvas.getHeight().unsafeCast<Double>()

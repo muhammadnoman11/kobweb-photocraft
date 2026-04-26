@@ -21,6 +21,7 @@ import org.jetbrains.compose.web.dom.*
 import org.jetbrains.compose.web.css.AlignItems
 import org.jetbrains.compose.web.css.JustifyContent
 import com.varabyte.kobweb.compose.ui.graphics.Color
+import kotlinx.browser.document
 
 
 @Composable
@@ -183,7 +184,7 @@ fun ActionButton(
     }
 
     // Direct DOM button (gives us complete Modifier control)
-      Button(attrs = {
+    Button(attrs = {
         onClick { onClick() }
         style {
             if (fullWidth) property("width", "100%")

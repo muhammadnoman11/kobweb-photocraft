@@ -38,7 +38,6 @@ import org.jetbrains.compose.web.dom.Select
 import org.jetbrains.compose.web.dom.Text
 import org.jetbrains.compose.web.dom.TextArea
 
-
 @Composable
 fun TextPanel(canvas: dynamic, historyRef: MutableState<dynamic>, onChanged: () -> Unit) {
     var props by remember { mutableStateOf(TextProperties()) }
@@ -71,7 +70,7 @@ fun TextPanel(canvas: dynamic, historyRef: MutableState<dynamic>, onChanged: () 
             style {
                 property("width", "100%"); property("background", "#242424")
                 property("border", "1px solid #2a2a2a"); property("border-radius", "8px")
-                property("color", "#f0f0f0"); property("font-family", "'Space Grotesk', sans-serif")
+                property("color", "#fffff"); property("font-family", "'Space Grotesk', sans-serif")
                 property("font-size", "12px"); property("padding", "8px")
                 property("resize", "vertical"); property("min-height", "60px")
                 property("outline", "none"); property("box-sizing", "border-box")
