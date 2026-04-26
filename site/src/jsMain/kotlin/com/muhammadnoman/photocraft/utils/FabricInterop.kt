@@ -403,47 +403,173 @@ fun fabricUpdateTextObject(obj: dynamic, props: TextProperties) {
 }
 
 // Shapes
-
-fun fabricAddShape(canvas: dynamic, shapeType: ShapeType, color: String = "#c8923f") {
+fun fabricAddShape(canvas: dynamic, shapeType: ShapeType, fill: String = "#c8923f", stroke: String = "#ffffff", strokeWidth: Double = 0.0) {
     val fabric = getFabric() ?: return
     val w = canvas.getWidth().unsafeCast<Double>()
     val h = canvas.getHeight().unsafeCast<Double>()
     val cx = w / 2
     val cy = h / 2
+
+    // For shapes without stroke, set strokeWidth to 0 to disable it
+    val strokeWidthVal = if (strokeWidth > 0) strokeWidth else 0.0
+
     when (shapeType) {
         ShapeType.RECTANGLE -> js(
             """
-            var r=new fabric.Rect({left:cx-75,top:cy-50,width:150,height:100,fill:color,rx:6,ry:6});
-            canvas.add(r);canvas.setActiveObject(r);canvas.requestRenderAll();"""
+            var r = new fabric.Rect({
+                left: cx - 75, top: cy - 50, width: 150, height: 100,
+                fill: fill, stroke: stroke, strokeWidth: strokeWidthVal, rx: 6, ry: 6
+            });
+            canvas.add(r);
+            canvas.setActiveObject(r);
+            canvas.requestRenderAll();
+            """
         )
 
         ShapeType.CIRCLE -> js(
             """
-            var c=new fabric.Circle({left:cx-60,top:cy-60,radius:60,fill:color});
-            canvas.add(c);canvas.setActiveObject(c);canvas.requestRenderAll();"""
+            var c = new fabric.Circle({
+                left: cx - 60, top: cy - 60, radius: 60,
+                fill: fill, stroke: stroke, strokeWidth: strokeWidthVal
+            });
+            canvas.add(c);
+            canvas.setActiveObject(c);
+            canvas.requestRenderAll();
+            """
         )
 
         ShapeType.TRIANGLE -> js(
             """
-            var t=new fabric.Triangle({left:cx-60,top:cy-60,width:120,height:100,fill:color});
-            canvas.add(t);canvas.setActiveObject(t);canvas.requestRenderAll();"""
+            var t = new fabric.Triangle({
+                left: cx - 60, top: cy - 60, width: 120, height: 100,
+                fill: fill, stroke: stroke, strokeWidth: strokeWidthVal
+            });
+            canvas.add(t);
+            canvas.setActiveObject(t);
+            canvas.requestRenderAll();
+            """
         )
 
-        ShapeType.LINE -> js(
+        ShapeType.STAR -> js(
             """
-            var l=new fabric.Line([cx-80,cy,cx+80,cy],{stroke:color,strokeWidth:4});
-            canvas.add(l);canvas.setActiveObject(l);canvas.requestRenderAll();"""
+            // Create a 5-point star
+            var points = [];
+            var outerRadius = 60;
+            var innerRadius = 25;
+            var numPoints = 5;
+            
+            for (var i = 0; i < numPoints * 2; i++) {
+                var radius = i % 2 === 0 ? outerRadius : innerRadius;
+                var angle = (i * Math.PI * 2) / (numPoints * 2) - Math.PI / 2;
+                var x = radius * Math.cos(angle);
+                var y = radius * Math.sin(angle);
+                points.push({ x: x, y: y });
+            }
+            
+            var star = new fabric.Polygon(points, {
+                left: cx - 60, top: cy - 60,
+                fill: fill, stroke: stroke, strokeWidth: strokeWidthVal,
+                objectCaching: false
+            });
+            canvas.add(star);
+            canvas.setActiveObject(star);
+            canvas.requestRenderAll();
+            """
         )
 
-        else -> js(
+        ShapeType.POLYGON -> js(
             """
-            var s=new fabric.Polygon([
-                {x:0,y:-60},{x:14,y:-20},{x:57,y:-20},{x:23,y:8},
-                {x:35,y:52},{x:0,y:28},{x:-35,y:52},{x:-23,y:8},{x:-57,y:-20},{x:-14,y:-20}
-            ],{left:cx-60,top:cy-60,fill:color});
-            canvas.add(s);canvas.setActiveObject(s);canvas.requestRenderAll();"""
+            // Create a hexagon
+            var points = [];
+            var radius = 55;
+            var numPoints = 6;
+            
+            for (var i = 0; i < numPoints; i++) {
+                var angle = (i * Math.PI * 2) / numPoints - Math.PI / 2;
+                var x = radius * Math.cos(angle);
+                var y = radius * Math.sin(angle);
+                points.push({ x: x, y: y });
+            }
+            
+            var polygon = new fabric.Polygon(points, {
+                left: cx - 55, top: cy - 55,
+                fill: fill, stroke: stroke, strokeWidth: strokeWidthVal,
+                objectCaching: false
+            });
+            canvas.add(polygon);
+            canvas.setActiveObject(polygon);
+            canvas.requestRenderAll();
+            """
+        )
+
+        ShapeType.ARROW -> js(
+            """
+            // Create an arrow shape
+            var points = [
+                { x: -60, y: -8 },
+                { x: -20, y: -8 },
+                { x: -20, y: -20 },
+                { x: 0, y: 0 },
+                { x: -20, y: 20 },
+                { x: -20, y: 8 },
+                { x: -60, y: 8 }
+            ];
+            
+            var arrow = new fabric.Polygon(points, {
+                left: cx - 30, top: cy - 20,
+                fill: fill, stroke: stroke, strokeWidth: strokeWidthVal,
+                objectCaching: false
+            });
+            canvas.add(arrow);
+            canvas.setActiveObject(arrow);
+            canvas.requestRenderAll();
+            """
         )
     }
+}
+
+// Add function to update selected shape's appearance
+fun fabricUpdateSelectedShape(canvas: dynamic, fill: String? = null, stroke: String? = null, strokeWidth: Double? = null) {
+    if (canvas == null) return
+    js(
+        """
+        var active = canvas.getActiveObject();
+        if (active) {
+            var type = active.type;
+            var changed = false;
+            if (type === 'rect' || type === 'circle' || type === 'triangle' || type === 'polygon') {
+                if (fill !== null && fill !== undefined) {
+                    active.set('fill', fill);
+                    changed = true;
+                }
+                if (stroke !== null && stroke !== undefined) {
+                    active.set('stroke', stroke);
+                    changed = true;
+                }
+                if (strokeWidth !== null && strokeWidth !== undefined) {
+                    active.set('strokeWidth', strokeWidth);
+                    changed = true;
+                }
+            }
+            if (type === 'line') {
+                if (stroke !== null && stroke !== undefined) {
+                    active.set('stroke', stroke);
+                    changed = true;
+                }
+                if (strokeWidth !== null && strokeWidth !== undefined) {
+                    active.set('strokeWidth', strokeWidth);
+                    changed = true;
+                }
+            }
+            if (changed) {
+                canvas.requestRenderAll();
+                if (canvas.fire) {
+                    canvas.fire('object:modified', { target: active });
+                }
+            }
+        }
+        """
+    )
 }
 
 // Stickers
@@ -1092,3 +1218,5 @@ fun fabricResizeCanvasToImage(canvas: dynamic, maxW: Double, maxH: Double) {
     """
     )
 }
+
+

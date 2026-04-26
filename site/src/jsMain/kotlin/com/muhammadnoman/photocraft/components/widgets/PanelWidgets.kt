@@ -85,8 +85,25 @@ fun SliderRow(
             attr("step", step.toString())
             value(value.toString())
             onInput { e -> onValueChange(e.value!!.toDouble()) }
-            style { property("width", "100%") }
+            style {
+                property("width", "100%")
+
+                val percent = ((value - min) / (max - min)) * 100
+
+                property(
+                    "background",
+                    "linear-gradient(to right, #c8923f 0%, #c8923f ${percent}%, #ccc ${percent}%, #ccc 100%)"
+                )
+
+                property("appearance", "none")
+                property("height", "6px")
+                property("border-radius", "3px")
+                property("outline", "none")
+            }
+
         })
+
+
     }
 }
 

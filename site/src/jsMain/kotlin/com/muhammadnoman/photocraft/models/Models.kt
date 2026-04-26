@@ -74,7 +74,7 @@ data class TextProperties(
  * Shape types available
  */
 enum class ShapeType {
-    RECTANGLE, CIRCLE, TRIANGLE, STAR, POLYGON, LINE, ARROW
+    RECTANGLE, CIRCLE, TRIANGLE, STAR, POLYGON, ARROW
 }
 
 /**
