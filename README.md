@@ -58,7 +58,7 @@
 
 ## 🎥 Demo
 
-<video src="demo/photocraft-demo.mp4" controls width="100%"></video>
+<video src="[demo/photocraft-demo.mp4](https://github.com/muhammadnoman11/kobweb-photocraft/blob/main/photocraft-demo2.mp4)" controls width="100%"></video>
 
 ---
 
