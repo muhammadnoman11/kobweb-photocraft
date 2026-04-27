@@ -58,7 +58,7 @@
 
 ## 🎥 Demo
 
-<video src="./demo/photocraft-demo.mp4" controls width="100%"></video>
+<video src="demo/photocraft-demo.mp4" controls width="100%"></video>
 
 ---
 
