@@ -64,7 +64,6 @@ import org.jetbrains.compose.web.dom.Div
 import org.jetbrains.compose.web.dom.I
 import org.jetbrains.compose.web.dom.Img
 
-
 @Composable
 fun FiltersPanel(canvas: dynamic, hasImage: Boolean, historyRef: MutableState<dynamic>, onFilterApplied: () -> Unit) {
     var activePresetId by remember(canvas, hasImage) {
@@ -194,5 +193,3 @@ private fun getCssFilterStr(preset: FilterPreset): String {
     if (preset.blur > 0.0) parts += "blur(${preset.blur / 100.0 * 2}px)"
     return parts.joinToString(" ").ifEmpty { "none" }
 }
-
-

@@ -55,7 +55,6 @@ import org.jetbrains.compose.web.dom.I
 import org.jetbrains.compose.web.dom.Span
 import org.jetbrains.compose.web.dom.Text
 
-
 @Composable
 fun LayersPanel(canvas: dynamic, historyRef: MutableState<dynamic>, onChanged: () -> Unit) {
     var layers by remember { mutableStateOf(listOf<LayerItem>()) }

@@ -144,5 +144,3 @@ private fun ActiveTool.displayName() = when (this) {
     ActiveTool.LAYERS -> "Layers";
     ActiveTool.NONE -> ""
 }
-
-

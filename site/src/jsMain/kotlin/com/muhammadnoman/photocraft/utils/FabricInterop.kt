@@ -950,89 +950,6 @@ fun fabricSetTransparentBackground(canvas: dynamic) {
 //     Kotlin after the JS filter rebuild completes.
 // ============================================================
 
-//fun setupFabricHistory(canvas: dynamic): dynamic {
-//    return js(
-//        """
-//        var history = { states:[], current:-1, maxStates:100 };
-//        history._saving = false;
-//        history._debounceTimer = null;
-//
-//        // Save a snapshot immediately (used for explicit actions)
-//        history.saveSnapshot = function() {
-//            if (history._saving) return;
-//            history._saving = true;
-//            // Trim redo branch
-//            if (history.current < history.states.length - 1)
-//                history.states.splice(history.current + 1);
-//            var json = canvas.toJSON([
-//                '_pcFilterState','_pcActivePresetId','selectable','evented',
-//                'hasControls','hasBorders','lockMovementX','lockMovementY',
-//                'lockScalingX','lockScalingY','lockRotation','hoverCursor',
-//                'flipX','flipY','angle'
-//            ]);
-//            // Deep-clone so mutations to live objects don't corrupt history
-//            history.states.push(JSON.parse(JSON.stringify(json)));
-//            if (history.states.length > history.maxStates) history.states.shift();
-//            else history.current++;
-//            history._saving = false;
-//        };
-//
-//        // Debounced save — coalesces rapid events (e.g. object:modified during drag)
-//        history._debouncedSave = function() {
-//            clearTimeout(history._debounceTimer);
-//            history._debounceTimer = setTimeout(function() {
-//                history.saveSnapshot();
-//            }, 300);
-//        };
-//
-//        history.undo = function() {
-//            if (history.current <= 0) return false;
-//            history.current--;
-//            history._saving = true;
-//            canvas.loadFromJSON(history.states[history.current], function() {
-//                canvas.requestRenderAll();
-//                history._saving = false;
-//            });
-//            return true;
-//        };
-//
-//        history.redo = function() {
-//            if (history.current >= history.states.length - 1) return false;
-//            history.current++;
-//            history._saving = true;
-//            canvas.loadFromJSON(history.states[history.current], function() {
-//                canvas.requestRenderAll();
-//                history._saving = false;
-//            });
-//            return true;
-//        };
-//
-//        history.canUndo = function() { return history.current > 0; };
-//        history.canRedo = function() { return history.current < history.states.length - 1; };
-//
-//        // Only structural changes (add/remove/move/resize/rotate) auto-save via debounce.
-//        // Filter and adjustment changes are saved explicitly by Kotlin callers.
-//        canvas.on('object:added',    function(e) {
-//            // Don't save when the crop rect is added
-//            if (e.target && e.target.id === '_pcCropRect') return;
-//            if (!history._saving) history._debouncedSave();
-//        });
-//        canvas.on('object:modified', function(e) {
-//            if (e.target && e.target.id === '_pcCropRect') return;
-//            if (!history._saving) history._debouncedSave();
-//        });
-//        canvas.on('object:removed',  function(e) {
-//            if (e.target && e.target.id === '_pcCropRect') return;
-//            if (!history._saving) history._debouncedSave();
-//        });
-//
-//        // Save initial blank state
-//        history.saveSnapshot();
-//        history;
-//    """
-//    )
-//}
-
 fun setupFabricHistory(canvas: dynamic): dynamic {
     return js(
         """
@@ -1218,5 +1135,3 @@ fun fabricResizeCanvasToImage(canvas: dynamic, maxW: Double, maxH: Double) {
     """
     )
 }
-
-

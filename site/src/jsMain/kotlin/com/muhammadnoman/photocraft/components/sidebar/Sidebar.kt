@@ -18,6 +18,7 @@ import org.jetbrains.compose.web.dom.*
 import org.jetbrains.compose.web.css.AlignItems
 import org.jetbrains.compose.web.css.JustifyContent
 import com.varabyte.kobweb.compose.ui.graphics.Color
+import com.varabyte.kobweb.framework.annotations.DelicateApi
 
 
 data class SidebarItem(
@@ -27,14 +28,14 @@ data class SidebarItem(
 )
 
 val sidebarItems = listOf(
-    SidebarItem(ActiveTool.UPLOAD,      "fa-upload",      "Upload"),
-    SidebarItem(ActiveTool.CROP,        "fa-crop-simple", "Crop"),
-    SidebarItem(ActiveTool.FILTERS,     "fa-palette",     "Filters"),
-    SidebarItem(ActiveTool.ADJUSTMENTS, "fa-sliders",     "Adjustments"),
-    SidebarItem(ActiveTool.TEXT,        "fa-t",           "Text"),
-    SidebarItem(ActiveTool.STICKERS,    "fa-face-smile",  "Stickers"),
-    SidebarItem(ActiveTool.SHAPES,      "fa-shapes",      "Shapes"),
-    SidebarItem(ActiveTool.LAYERS,      "fa-layer-group", "Layers"),
+    SidebarItem(ActiveTool.UPLOAD, "fa-upload", "Upload"),
+    SidebarItem(ActiveTool.CROP, "fa-crop-simple", "Crop"),
+    SidebarItem(ActiveTool.FILTERS, "fa-palette", "Filters"),
+    SidebarItem(ActiveTool.ADJUSTMENTS, "fa-sliders", "Adjustments"),
+    SidebarItem(ActiveTool.TEXT, "fa-t", "Text"),
+    SidebarItem(ActiveTool.STICKERS, "fa-face-smile", "Stickers"),
+    SidebarItem(ActiveTool.SHAPES, "fa-shapes", "Shapes"),
+    SidebarItem(ActiveTool.LAYERS, "fa-layer-group", "Layers"),
 )
 
 
@@ -64,6 +65,7 @@ fun Sidebar(
 }
 
 
+@OptIn(DelicateApi::class)
 @Composable
 fun SidebarToolItem(
     item: SidebarItem,
@@ -71,7 +73,7 @@ fun SidebarToolItem(
     onClick: () -> Unit
 ) {
     val breakpoint = rememberBreakpoint()
-    val showLabel  = breakpoint >= Breakpoint.LG
+    val showLabel = breakpoint >= Breakpoint.LG
 
     // Active left-border accent + background via inline style
     // (CssStyle hover is defined in AppStyles.kt; active state is dynamic so inline)
