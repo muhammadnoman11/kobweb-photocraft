@@ -17,9 +17,13 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -30,13 +34,20 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Export static site
+      - name: Export static site (Kobweb)
         run: ./gradlew :site:kobwebExport --stacktrace --info
 
-      - name: Flatten exported site for Pages
+      - name: Fix Kobweb Pages structure
         run: |
-          cp site/.kobweb/site/system/index.html site/.kobweb/site/index.html
+          mkdir -p site/.kobweb/site
+          
+          # ensure index.html is at root for GitHub Pages
+          cp site/.kobweb/site/system/index.html site/.kobweb/site/index.html || true
+          
+          # copy JS files
           cp site/.kobweb/site/system/*.js* site/.kobweb/site/ || true
+          
+          # copy resources
           cp -R site/.kobweb/site/resources/* site/.kobweb/site/ || true
 
       - name: Upload Pages artifact
@@ -47,9 +58,11 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
