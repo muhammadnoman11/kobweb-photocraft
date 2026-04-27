@@ -1,5 +1,6 @@
 site:
   title: "PhotoCraft"
+  basePath: "kobweb-photocraft"
 
 server:
   files:
