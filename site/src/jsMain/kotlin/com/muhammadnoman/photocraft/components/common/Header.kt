@@ -8,12 +8,15 @@ import com.varabyte.kobweb.compose.ui.modifiers.*
 import com.varabyte.kobweb.silk.components.text.SpanText
 import com.varabyte.kobweb.silk.style.toModifier
 import com.muhammadnoman.photocraft.styles.HeaderStyle
+import com.varabyte.kobweb.compose.dom.svg.SVGColorChannel
 import org.jetbrains.compose.web.attributes.InputType
 import org.jetbrains.compose.web.dom.*
 import org.jetbrains.compose.web.css.px
 import org.jetbrains.compose.web.css.AlignItems
 import org.jetbrains.compose.web.css.JustifyContent
 import com.varabyte.kobweb.compose.ui.graphics.Color
+import com.varabyte.kobweb.silk.components.forms.CheckboxKind
+import com.varabyte.kobweb.silk.components.graphics.Image
 import org.jetbrains.compose.web.css.DisplayStyle
 
 @Composable
@@ -43,18 +46,17 @@ fun TopHeader(
                 modifier = Modifier
                     .size(28.px)
                     .borderRadius(7.px)
-                    .background(
-                        Color.rgb(0xe8a844)
-                    )
                     .display(DisplayStyle.Flex)
                     .alignItems(AlignItems.Center)
                     .justifyContent(JustifyContent.Center),
                 contentAlignment = Alignment.Center
             ) {
-                I(attrs = {
-                    classes("fa-solid", "fa-star")
-                    style { property("color", "#fff"); property("font-size", "13px") }
-                })
+
+                Image(
+                    src = "photocraft_icon.png",
+                    modifier = Modifier.size(28.px).objectFit(ObjectFit.Contain)
+                )
+
             }
 
             SpanText(
