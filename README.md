@@ -56,9 +56,17 @@
 
 ---
 
-## 🎥 Demo
+## 🖼️ ScreenShots
 
-<video src="[demo/photocraft-demo.mp4](https://github.com/muhammadnoman11/kobweb-photocraft/blob/main/photocraft-demo2.mp4)" controls width="100%"></video>
+<p align="center">
+  <img src="./demo/ss_1.png" width="48%" style="margin-right: 1%;" />
+  <img src="./demo/ss_2.png" width="48%" />
+</p>
+
+<p align="center">
+  <img src="./demo/ss_3.png" width="48%" style="margin-right: 1%;" />
+  <img src="./demo/ss_4.png" width="48%" />
+</p>
 
 ---
 
